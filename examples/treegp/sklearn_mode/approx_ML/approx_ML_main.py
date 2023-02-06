@@ -1,7 +1,9 @@
 """
-Solving a sklearn_mode problem created through scikit-learn's `load breast cancer`.
-This is an sklearn setting so we use `fit` and `predict`.
+My Teza.
 """
+
+import numpy as np
+from time import time
 
 from time import time
 from sklearn.datasets import load_breast_cancer
@@ -22,19 +24,26 @@ from eckity.statistics.best_avg_worst_size_tree_statistics import BestAverageWor
 from eckity.subpopulation import Subpopulation
 from eckity.termination_checkers.threshold_from_target_termination_checker import ThresholdFromTargetTerminationChecker
 
-# Adding your own functions
 from eckity.sklearn_compatible.classification_evaluator import ClassificationEvaluator
+
+from pmlb import fetch_data
+
+from examples.treegp.sklearn_mode.approx_ML.classification_evaluator_with_ml_approx import \
+    ClassificationMLapproxPopulationEvaluator
 
 
 def main():
     """
-    In this experiment we use the sklearn breast cancer dataset
-    The goal of this experiment is to create a GP Tree that classifies cases of breast cancer
+    Basic setup.
     """
+
+    # Returns a pandas DataFrame
+    adult_data = fetch_data('GAMETES_Epistasis_2_Way_20atts_0.1H_EDM_1_1',return_X_y=True, local_cache_dir='./')
+    print(adult_data)
     start_time = time()
 
     # load the brest cancer dataset from sklearn
-    X, y = load_breast_cancer(return_X_y=True)
+    X, y = adult_data
 
     # Automatically generate a terminal set.
     # Since there are 5 features, set terminal_set to: ['x0', 'x1', 'x2', ..., 'x9']
@@ -64,6 +73,7 @@ def main():
                           (TournamentSelection(tournament_size=4, higher_is_better=True), 1)
                       ]
                       ),
+        population_evaluator=ClassificationMLapproxPopulationEvaluator(),
         breeder=SimpleBreeder(),
         max_workers=1,
         max_generation=1000,
@@ -77,9 +87,9 @@ def main():
     # split brest cancer dataset to train and test set
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
+    print(X_train)
+    print(y_train)
     # fit the model (perform evolution process)
-    print(X_train.shape)
-    print(y_train.shape)
     classifier.fit(X_train, y_train)
 
     # check training set results
