@@ -46,7 +46,7 @@ def main():
 
     # Initialize SimpleEvolution instance
     algo = SimpleEvolution(
-        Subpopulation(creators=GAFloatVectorCreator(length=X.shape[1]),
+        Subpopulation(creators=GAFloatVectorCreator(length=X.shape[1], bounds=(-1, 1)),
                       population_size=50,
                       # user-defined fitness evaluation method
                       evaluator=individual_evaluator,
@@ -63,7 +63,7 @@ def main():
                           (TournamentSelection(tournament_size=4, higher_is_better=True), 1)
                       ]),
         breeder=SimpleBreeder(),
-        population_evaluator=ClfMLApproxPopulationEvaluator(individual_evaluator, X_train, y_train),
+        population_evaluator=ClfMLApproxPopulationEvaluator(individual_evaluator),
         max_workers=1,
         max_generation=100,
         statistics=BestAverageWorstStatistics()
