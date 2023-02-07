@@ -59,9 +59,12 @@ class ClfMLApproxPopulationEvaluator(PopulationEvaluator):
                 for future in eval_futures:
                     future.result()
 
-                # accuracy, fitnesses = self.eval(population.sub_populations[0].individuals)
-                # self.approx_fitness_accuracy = accuracy
                 fitnesses = [ind.get_pure_fitness() for ind in sub_population.individuals]
+
+                # bug: calling predict before first partial_fit
+                accuracy = self.eval(sub_population.individuals, fitnesses)
+
+                self.approx_fitness_accuracy = accuracy
                 self.partial_fit(sub_population.individuals, fitnesses)
                     
         # only one subpopulation in simple case
@@ -128,7 +131,7 @@ class ClfMLApproxPopulationEvaluator(PopulationEvaluator):
         float
             accuracy score of the model
         """
-        # fitnesses = [self.ind_eval._evaluate_individual(ind) for ind in individuals]
-        ind_vectors = [ind.get_vector() for ind in individuals]
-        accuracy = accuracy_score(y_true=fitnesses, y_pred=self.predict(ind_vectors))
+        y_pred = self.predict(individuals)
+        accuracy = accuracy_score(y_true=fitnesses, y_pred=y_pred)
+        print('model accuracy:', accuracy)
         return accuracy
