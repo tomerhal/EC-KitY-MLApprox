@@ -1,4 +1,4 @@
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import mean_absolute_error
 
 from eckity.evaluators.simple_individual_evaluator import SimpleIndividualEvaluator
 from eckity.sklearn_compatible.classification_evaluator import ClassificationEvaluator
@@ -22,8 +22,9 @@ class ClfMLApproxPopulationEvaluator(PopulationEvaluator):
         super().__init__()
         self.ind_eval = ind_eval
         self.model = SGDRegressor(max_iter=1000, tol=1e-3)
-        self.approx_fitness_accuracy = 0
+        self.approx_fitness_error = float('inf')
         self.should_approximate = False
+        self.first_gen = True
 
     @overrides
     def _evaluate(self, population: Population) -> Individual:
@@ -61,10 +62,14 @@ class ClfMLApproxPopulationEvaluator(PopulationEvaluator):
 
                 fitnesses = [ind.get_pure_fitness() for ind in sub_population.individuals]
 
-                # bug: calling predict before first partial_fit
-                accuracy = self.eval(sub_population.individuals, fitnesses)
+                if self.first_gen:
+                    self.first_gen = False
+                else:
+                    # bug: calling predict before first partial_fit
+                    err = self.eval(sub_population.individuals, fitnesses)
+                    self.approx_fitness_error = err
 
-                self.approx_fitness_accuracy = accuracy
+
                 self.partial_fit(sub_population.individuals, fitnesses)
                     
         # only one subpopulation in simple case
@@ -132,6 +137,6 @@ class ClfMLApproxPopulationEvaluator(PopulationEvaluator):
             accuracy score of the model
         """
         y_pred = self.predict(individuals)
-        accuracy = accuracy_score(y_true=fitnesses, y_pred=y_pred)
-        print('model accuracy:', accuracy)
-        return accuracy
+        err = mean_absolute_error(y_true=fitnesses, y_pred=y_pred)
+        print('model mean absolute error:', err)
+        return err
