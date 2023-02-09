@@ -1,5 +1,6 @@
 import random
 from sklearn.metrics import mean_absolute_error
+from sklearn.base import RegressorMixin
 
 from eckity.evaluators.simple_individual_evaluator import SimpleIndividualEvaluator
 from eckity.sklearn_compatible.classification_evaluator import ClassificationEvaluator
@@ -33,10 +34,10 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
                 population_sample_size=10,
                 gen_sample_step=1):
         super().__init__()
-        self.model = SGDRegressor(max_iter=1000, tol=1e-3)
         self.approx_fitness_error = float('inf')
         self.population_sample_size = population_sample_size
         self.gen_sample_step = gen_sample_step
+        self.model = None
         self.gen = 0
 
         if approx_condition is None:
@@ -82,7 +83,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
                     # prevent calling predict before first partial_fit
                     self._update_model_error(sub_population.individuals, fitnesses)
                 
-                self.partial_fit(sub_population.individuals, fitnesses)
+                self.fit(sub_population.individuals, fitnesses)
         
         self.gen += 1
 
@@ -131,7 +132,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         fitnesses = [ind.get_pure_fitness() for ind in individuals]
         return fitnesses
 
-    def partial_fit(self, individuals: List[Individual], fitnesses: List[float]) -> None:
+    def fit(self, individuals: List[Individual], fitnesses: List[float]) -> RegressorMixin:
         """
         Fit the Machine Learning model incrementally.
 
@@ -144,8 +145,9 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         fitnesses : List[float]
             Fitness scores of the individuals, repectively
         """
+        self.model = SGDRegressor(max_iter=1000, tol=1e-3)
         ind_vectors = [ind.get_vector() for ind in individuals]
-        self.model.partial_fit(ind_vectors, fitnesses)
+        self.model.fit(ind_vectors, fitnesses)
 
     def predict(self, individuals: List[Individual]):
         """
