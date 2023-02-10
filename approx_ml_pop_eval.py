@@ -41,18 +41,23 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
                 approx_condition: callable = None,
                 population_sample_size=10,
                 gen_sample_step=1,
-                scoring=mean_absolute_error):
+                scoring=mean_absolute_error,
+                accumulate_population_data=False):
         super().__init__()
         self.approx_fitness_error = float('inf')
         self.population_sample_size = population_sample_size
         self.gen_sample_step = gen_sample_step
         self.scoring = scoring
+        self.accumulate_population_data = accumulate_population_data
 
         self.model = None
         self.gen = 0
 
         if approx_condition is None:
             self.should_approximate = lambda: self.approx_fitness_error < 0.1
+
+        if accumulate_population_data:
+            self.df = None
 
     @overrides
     def _evaluate(self, population: Population) -> Individual:
@@ -158,7 +163,31 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         """
         self.model = SGDRegressor(max_iter=1000, tol=1e-3)
         ind_vectors = [ind.get_vector() for ind in individuals]
-        X, y = np.array(ind_vectors), np.array(fitnesses)
+        
+        if self.accumulate_population_data:
+            if self.df is None:
+                self.df = pd.DataFrame(np.array(ind_vectors))
+                self.df['fitness'] = np.array(fitnesses)
+
+                column_names = self.df.columns
+
+                # print each column name
+                print('###### COLUMNS ######')
+                for column_name in column_names:
+                    print(column_name)
+            else:
+                df = pd.DataFrame(np.array(ind_vectors))
+                df['fitness'] = np.array(fitnesses)
+
+                self.df = pd.concat([self.df, df], ignore_index=True, copy=False)
+                n_features= self.df.shape[1] - 1
+
+                # if the same individual is evaluated multiple times, keep the last evaluation
+                self.df.drop_duplicates(subset=range(n_features), keep='last', inplace=True)
+
+            X, y = self.df.iloc[:, :-1].to_numpy(), self.df.iloc[:, -1].to_numpy()
+        else:
+            X, y = np.array(ind_vectors), np.array(fitnesses)
 
         scores = []
         kf = KFold(n_splits=5, shuffle=True)

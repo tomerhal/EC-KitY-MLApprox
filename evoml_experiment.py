@@ -67,7 +67,7 @@ def main():
                           (TournamentSelection(tournament_size=4, higher_is_better=True), 1)
                       ]),
         breeder=SimpleBreeder(),
-        population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=10),
+        population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=10, accumulate_population_data=True),
         max_workers=1,
         max_generation=100,
         statistics=ApproxStatistics(ind_eval)
