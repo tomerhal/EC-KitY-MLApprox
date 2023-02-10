@@ -50,7 +50,7 @@ def main():
 
     evoml = SimpleEvolution(
         Subpopulation(creators=GAFloatVectorCreator(length=X.shape[1], bounds=(-1, 1)),
-                      population_size=10,
+                      population_size=100,
                       # user-defined fitness evaluation method
                       evaluator=ind_eval,
                       # maximization problem (fitness is sum of values), so higher fitness is better
