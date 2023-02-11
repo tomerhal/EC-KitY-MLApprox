@@ -5,28 +5,26 @@ My Teza.
 import numpy as np
 from time import process_time
 
-from time import time
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+
+from eckity.sklearn_compatible.sk_classifier import SKClassifier
 
 from eckity.algorithms.simple_evolution import SimpleEvolution
 from eckity.breeders.simple_breeder import SimpleBreeder
 from eckity.subpopulation import Subpopulation
 from eckity.creators.ga_creators.float_vector_creator import GAFloatVectorCreator
-from eckity.statistics.best_average_worst_statistics import BestAverageWorstStatistics
 
 from eckity.genetic_operators.selections.tournament_selection import TournamentSelection
 from eckity.genetic_operators.crossovers.vector_k_point_crossover import VectorKPointsCrossover
 from eckity.genetic_operators.mutations.vector_random_mutation import FloatVectorUniformNPointMutation
 from eckity.genetic_operators.mutations.vector_random_mutation import FloatVectorGaussNPointMutation
 
-from eckity.sklearn_compatible.sk_classifier import SKClassifier
 from lin_comb_clf_eval import LinCombClassificationfEvaluator
+from plot_statistics import PlotStatistics
 
 from pmlb import fetch_data
-
-from approx_ml_pop_eval import ApproxMLPopulationEvaluator
 
 
 def main():
@@ -67,7 +65,7 @@ def main():
         breeder=SimpleBreeder(),
         max_workers=1,
         max_generation=100,
-        statistics=BestAverageWorstStatistics()
+        statistics=PlotStatistics()
     )
 
     # wrap the basic evolutionary algorithm with a sklearn-compatible classifier
@@ -83,6 +81,9 @@ def main():
 
     evo_time = process_time() - evo_start_time
     print('Total time:', evo_time)
+
+    plot_stats = evo.statistics[0]
+    plot_stats.plot_statistics()
 
 if __name__ == "__main__":
     main()

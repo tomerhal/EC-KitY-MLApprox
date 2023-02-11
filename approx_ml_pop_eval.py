@@ -4,10 +4,8 @@ import pandas as pd
 
 from sklearn.metrics import mean_absolute_error
 from sklearn.base import RegressorMixin
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, cross_val_score
 
-from eckity.evaluators.simple_individual_evaluator import SimpleIndividualEvaluator
-from eckity.sklearn_compatible.classification_evaluator import ClassificationEvaluator
 from sklearn.linear_model import SGDRegressor
 from overrides import overrides
 
@@ -77,7 +75,6 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         super()._evaluate(population)
         for sub_population in population.sub_populations:
             if self.should_approximate():
-                print('=== Approximating fitness ===')
                 # Approximate fitness scores of the whole population
                 preds = self.predict(sub_population.individuals)
                 for i, ind in enumerate(sub_population.individuals):
@@ -94,13 +91,10 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
                     # update the model's performance
                     self._update_model_error(sample_inds, fitnesses)
             else:
-                print('=== Computing fitness ===')
                 # Compute fitness scores of the whole population
                 fitnesses = self._evaluate_individuals(sub_population.individuals, sub_population.evaluator)
                 self.fit(sub_population.individuals, fitnesses)
-            
-            print('model mean absolute error:', self.approx_fitness_error)
-        
+                    
         self.gen += 1
 
         # only one subpopulation in simple case
@@ -168,13 +162,6 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
             if self.df is None:
                 self.df = pd.DataFrame(np.array(ind_vectors))
                 self.df['fitness'] = np.array(fitnesses)
-
-                column_names = self.df.columns
-
-                # print each column name
-                print('###### COLUMNS ######')
-                for column_name in column_names:
-                    print(column_name)
             else:
                 df = pd.DataFrame(np.array(ind_vectors))
                 df['fitness'] = np.array(fitnesses)
@@ -189,6 +176,9 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         else:
             X, y = np.array(ind_vectors), np.array(fitnesses)
 
+        # Too slow
+        # self.approx_fitness_error = cross_val_score(self.model, X, y, cv=KFold(n_splits=5, shuffle=True)).mean()
+        
         scores = []
         kf = KFold(n_splits=5, shuffle=True)
         for train_index, test_index in kf.split(X):
@@ -196,7 +186,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
             scores.append(self.scoring(y[test_index], self.model.predict(X[test_index])))
         self.approx_fitness_error = np.mean(scores)
 
-        self.model.fit(ind_vectors, fitnesses)
+        self.model.fit(X, y)
 
     def predict(self, individuals: List[Individual]):
         """
