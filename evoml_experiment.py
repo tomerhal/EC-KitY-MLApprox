@@ -13,6 +13,8 @@ from eckity.algorithms.simple_evolution import SimpleEvolution
 from eckity.breeders.simple_breeder import SimpleBreeder
 from eckity.subpopulation import Subpopulation
 from eckity.creators.ga_creators.float_vector_creator import GAFloatVectorCreator
+
+from approx_statistics import ApproxStatistics
 from plot_statistics import PlotStatistics
 
 from eckity.genetic_operators.selections.tournament_selection import TournamentSelection
@@ -43,12 +45,13 @@ def main():
     sc = StandardScaler()
     X_train = sc.fit_transform(X_train) # scaled data has mean 0 and variance 1 (only over training set)
     X_test = sc.transform(X_test) # use same scaler as one fitted to training data
+    Evaluator = LinCombClassificationfEvaluator()
 
     evoml = SimpleEvolution(
         Subpopulation(creators=GAFloatVectorCreator(length=X.shape[1], bounds=(-1, 1)),
                       population_size=100,
                       # user-defined fitness evaluation method
-                      evaluator=LinCombClassificationfEvaluator(),
+                      evaluator=Evaluator,
                       # maximization problem (fitness is sum of values), so higher fitness is better
                       higher_is_better=True,
                       elitism_rate=0.0,
@@ -66,7 +69,7 @@ def main():
         population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=10, accumulate_population_data=True),
         max_workers=1,
         max_generation=100,
-        statistics=PlotStatistics()
+        statistics=ApproxStatistics(Evaluator)
     )
     # wrap the basic evolutionary algorithm with a sklearn-compatible classifier
     evoml_classifier = SKClassifier(evoml)
