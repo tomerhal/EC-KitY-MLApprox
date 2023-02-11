@@ -1,4 +1,6 @@
 from sys import stdout
+import matplotlib.pyplot as plt
+import numpy as np
 
 from eckity.statistics.statistics import Statistics
 from eckity.evaluators.individual_evaluator import IndividualEvaluator
@@ -25,32 +27,56 @@ class ApproxStatistics(Statistics):
         if format_string is None:
             format_string = 'best fitness {}\nworst fitness {}\naverage fitness {}\n'
         self.ind_eval = ind_eval
+        self.mean_fitnesses = []
+        self.median_fitnesses = []
+        self.max_fitnesses = []
+        self.min_fitnesses = []
+        self.mean_approx_fitnesses = []
+        self.median_approx_fitnesses = []
+        self.max_approx_fitnesses = []
+        self.min_approx_fitnesses = []
         super().__init__(format_string, output_stream)
 
     def write_statistics(self, sender, data_dict):
-        print(f'generation #{data_dict["generation_num"]}', file=self.output_stream)
-        for index, sub_pop in enumerate(data_dict["population"].sub_populations):
-            print(f'subpopulation #{index}', file=self.output_stream)
-            best_individual = sub_pop.get_best_individual()
-            print('approximated fitness:')
-            print(self.format_string.format(best_individual.get_pure_fitness(),
-                                            sub_pop.get_worst_individual().get_pure_fitness(),
-                                            sub_pop.get_average_fitness()), file=self.output_stream)
-            
-            for ind in sub_pop.individuals:
-                ind.set_fitness_not_evaluated()
-                self.ind_eval.evaluate(ind, [])
-            
-
-            fitnesses = [ind.get_pure_fitness() for ind in sub_pop.individuals]
-            print('real fitness:')
-            print(self.format_string.format(max(fitnesses),
-                                            min(fitnesses),
-                                            sum(fitnesses)/len(fitnesses)), file=self.output_stream)
-
-
+        sub_pop = data_dict['population'].sub_populations[0]
+        #approx fitness
+        fitnesses = np.array([ind.get_pure_fitness() for ind in sub_pop.individuals])
+        self.mean_approx_fitnesses.append(np.mean(fitnesses))
+        self.median_approx_fitnesses.append(np.median(fitnesses))
+        self.max_approx_fitnesses.append(np.max(fitnesses))
+        self.min_approx_fitnesses.append(np.min(fitnesses))
+        #real fitness
+        for ind in sub_pop.individuals:
+            ind.set_fitness_not_evaluated()
+            self.ind_eval.evaluate(ind, [])
+        fitnesses = np.array([ind.get_pure_fitness() for ind in sub_pop.individuals])
+        self.mean_fitnesses.append(np.mean(fitnesses))
+        self.median_fitnesses.append(np.median(fitnesses))
+        self.max_fitnesses.append(np.max(fitnesses))
+        self.min_fitnesses.append(np.min(fitnesses))
 
     # TODO tostring to indiv
+
+    def plot_statistics(self):
+        assert len(self.mean_fitnesses) == len(self.median_fitnesses) == \
+               len(self.max_fitnesses) == len(self.min_fitnesses) == \
+               len(self.mean_approx_fitnesses) == len(self.median_approx_fitnesses) == \
+               len(self.max_approx_fitnesses) == len(self.min_approx_fitnesses), \
+               'Statistics lists are not the same length'
+
+        plt.plot(self.mean_approx_fitnesses, label='approx mean')
+        plt.plot(self.median_approx_fitnesses, label='approx median')
+        plt.plot(self.max_approx_fitnesses, label='approx max')
+        plt.plot(self.min_approx_fitnesses, label='approx min')
+        plt.plot(self.mean_fitnesses, label='mean')
+        plt.plot(self.median_fitnesses, label='median')
+        plt.plot(self.max_fitnesses, label='max')
+        plt.plot(self.min_fitnesses, label='min')
+        plt.xlabel('generation')
+        plt.ylabel('fitness')
+        plt.xticks(range(0, len(self.mean_fitnesses) + 1, 5))
+        plt.legend()
+        plt.show()
 
     # Necessary for valid pickling, since modules cannot be pickled
     def __getstate__(self):
