@@ -105,7 +105,7 @@ def fprint(fname, s):
 
 def save_params(fname, dsname, n_replicates, n_samples, n_features, model, model_params):
     fprint(fname, f' dsname: {dsname}\n n_samples: {n_samples}\n n_features: {n_features:}\n n_replicates: {n_replicates}\n\
-           model: {model.__name__}\n model params: {model_params}\n')
+model: {model.__name__}\n model params: {model_params}\n\n')
 
 def get_args():
     parser = ArgumentParser()
