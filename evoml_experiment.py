@@ -28,6 +28,7 @@ from lin_comb_clf_eval import LinCombClassificationfEvaluator
 from pmlb import fetch_data
 
 from approx_ml_pop_eval import ApproxMLPopulationEvaluator
+from threshold_from_saturation_termination_checker import ThresholdFromSaturationTerminationChecker
 
 
 def main():
@@ -54,7 +55,7 @@ def main():
                       evaluator=Evaluator,
                       # maximization problem (fitness is sum of values), so higher fitness is better
                       higher_is_better=True,
-                      elitism_rate=0.0,
+                      elitism_rate=0.04,
                       # genetic operators sequence to be applied in each generation
                       operators_sequence=[
                         VectorKPointsCrossover(probability=0.7, k=2),
@@ -69,7 +70,8 @@ def main():
         population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=10, accumulate_population_data=True),
         max_workers=1,
         max_generation=100,
-        statistics=ApproxStatistics(Evaluator)
+        statistics=PlotStatistics(),#ApproxStatistics(Evaluator),
+        termination_checker=ThresholdFromSaturationTerminationChecker(10,0.005)
     )
     # wrap the basic evolutionary algorithm with a sklearn-compatible classifier
     evoml_classifier = SKClassifier(evoml)

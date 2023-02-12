@@ -26,6 +26,8 @@ from plot_statistics import PlotStatistics
 
 from pmlb import fetch_data
 
+from threshold_from_saturation_termination_checker import ThresholdFromSaturationTerminationChecker
+
 
 def main():
     """
@@ -65,7 +67,8 @@ def main():
         breeder=SimpleBreeder(),
         max_workers=1,
         max_generation=100,
-        statistics=PlotStatistics()
+        statistics=PlotStatistics(),
+        termination_checker=ThresholdFromSaturationTerminationChecker(10, 0.005)
     )
 
     # wrap the basic evolutionary algorithm with a sklearn-compatible classifier

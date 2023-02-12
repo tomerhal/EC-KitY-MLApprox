@@ -79,7 +79,11 @@ class ApproxStatistics(Statistics):
         plt.xlabel('generation')
         plt.ylabel('fitness')
         plt.xticks(range(0, len(self.mean_fitnesses) + 1, 5))
-        plt.legend()
+
+        # Put a legend below current axis
+        plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),
+                  fancybox=True, shadow=True, ncol=5)
+        plt.tight_layout()
         plt.show()
 
     # Necessary for valid pickling, since modules cannot be pickled
