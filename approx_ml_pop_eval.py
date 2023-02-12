@@ -43,13 +43,19 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
                 scoring=mean_absolute_error,
                 model_type=SGDRegressor,
                 model_params=None,
-                accumulate_population_data=False):
+                accumulate_population_data=False,
+                cache_fitness=False):
         super().__init__()
         self.approx_fitness_error = float('inf')
         self.population_sample_size = population_sample_size
         self.gen_sample_step = gen_sample_step
         self.scoring = scoring
+
+        if cache_fitness != accumulate_population_data:
+            raise ValueError('cache_fitness and accumulate_population_data must be the same')
+
         self.accumulate_population_data = accumulate_population_data
+        self.cache_fitness = cache_fitness
 
         if model_params is None:
             model_params = {}
@@ -146,6 +152,16 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         List[float]
             list of fitness scores, with respect to the order of the individuals
         """
+        if self.cache_fitness:
+            # search for individuals in the first n-1 columns of the dataframe
+            # the last column is the fitness
+            df = self.df
+            for ind in individuals:
+                if ind.vector in df.values[:, :-1]:
+                    # set the fitness of the individual to the fitness in the dataframe
+                    ind.fitness.set_fitness(df[df.values[:, :-1] == ind.vector].values[0][-1])
+            
+
         # Evaluate the fitness and train the model incrementally
         eval_futures = [
             self.executor.submit(evaluator.evaluate, ind, individuals)
