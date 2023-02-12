@@ -40,11 +40,11 @@ class ApproxStatistics(Statistics):
     def write_statistics(self, sender, data_dict):
         sub_pop = data_dict['population'].sub_populations[0]
         #approx fitness
-        fitnesses = np.array([ind.get_pure_fitness() for ind in sub_pop.individuals])
-        self.mean_approx_fitnesses.append(np.mean(fitnesses))
-        self.median_approx_fitnesses.append(np.median(fitnesses))
-        self.max_approx_fitnesses.append(np.max(fitnesses))
-        self.min_approx_fitnesses.append(np.min(fitnesses))
+        approx_fitnesses = np.array([ind.get_pure_fitness() for ind in sub_pop.individuals])
+        self.mean_approx_fitnesses.append(np.mean(approx_fitnesses))
+        self.median_approx_fitnesses.append(np.median(approx_fitnesses))
+        self.max_approx_fitnesses.append(np.max(approx_fitnesses))
+        self.min_approx_fitnesses.append(np.min(approx_fitnesses))
         #real fitness
         for ind in sub_pop.individuals:
             ind.set_fitness_not_evaluated()
@@ -54,6 +54,10 @@ class ApproxStatistics(Statistics):
         self.median_fitnesses.append(np.median(fitnesses))
         self.max_fitnesses.append(np.max(fitnesses))
         self.min_fitnesses.append(np.min(fitnesses))
+
+        for i, ind in enumerate(sub_pop.individuals):
+            ind.set_fitness_not_evaluated()
+            ind.fitness.set_fitness(approx_fitnesses[i])
 
     # TODO tostring to indiv
 

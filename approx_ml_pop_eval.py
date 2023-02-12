@@ -1,6 +1,7 @@
 import random
 import numpy as np
 import pandas as pd
+from time import process_time
 
 from sklearn.metrics import mean_absolute_error
 from sklearn.base import RegressorMixin
@@ -40,6 +41,8 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
                 population_sample_size=10,
                 gen_sample_step=1,
                 scoring=mean_absolute_error,
+                model_type=SGDRegressor,
+                model_params=None,
                 accumulate_population_data=False):
         super().__init__()
         self.approx_fitness_error = float('inf')
@@ -48,8 +51,15 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         self.scoring = scoring
         self.accumulate_population_data = accumulate_population_data
 
+        if model_params is None:
+            model_params = {}
+        self.model_params = model_params
+        self.model_type = model_type
         self.model = None
         self.gen = 0
+        self.evaluation_time = 0
+
+        self.approx_count = 0
 
         if approx_condition is None:
             self.should_approximate = lambda: self.approx_fitness_error < 0.0375
@@ -72,9 +82,12 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         Individual
             the individual with the best fitness out of the given individuals
         """
+        eval_start_time = process_time()
         super()._evaluate(population)
+        should_approximate = self.should_approximate()
         for sub_population in population.sub_populations:
-            if self.should_approximate():
+            if should_approximate:
+                self.approx_count += 1
                 # Approximate fitness scores of the whole population
                 preds = self.predict(sub_population.individuals)
                 for i, ind in enumerate(sub_population.individuals):
@@ -90,11 +103,13 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
 
                     # update the model's performance
                     self._update_model_error(sample_inds, fitnesses)
+                
             else:
                 # Compute fitness scores of the whole population
                 fitnesses = self._evaluate_individuals(sub_population.individuals, sub_population.evaluator)
                 self.fit(sub_population.individuals, fitnesses)
-                    
+
+
         self.gen += 1
 
         # only one subpopulation in simple case
@@ -108,6 +123,8 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
                 best_ind = ind
                 best_fitness = ind.fitness
 
+        eval_end_time = process_time()
+        self.evaluation_time += eval_end_time - eval_start_time
         return best_ind
     
     def _update_model_error(self, individuals: List[Individual], fitnesses):
@@ -155,7 +172,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         fitnesses : List[float]
             Fitness scores of the individuals, repectively
         """
-        self.model = SGDRegressor(max_iter=1000, tol=1e-3)
+        self.model = self.model_type(**self.model_params)
         ind_vectors = [ind.get_vector() for ind in individuals]
         
         if self.accumulate_population_data:
