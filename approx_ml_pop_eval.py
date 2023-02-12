@@ -52,7 +52,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         self.gen = 0
 
         if approx_condition is None:
-            self.should_approximate = lambda: self.approx_fitness_error < 0.1
+            self.should_approximate = lambda: self.approx_fitness_error < 0.0375
 
         if accumulate_population_data:
             self.df = None
