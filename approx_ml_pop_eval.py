@@ -51,8 +51,8 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         self.gen_sample_step = gen_sample_step
         self.scoring = scoring
 
-        if cache_fitness != accumulate_population_data:
-            raise ValueError('cache_fitness and accumulate_population_data must be the same')
+        if cache_fitness and not accumulate_population_data:
+            raise ValueError('cache_fitness can only be enabled when accumulate_population_data is enabled')
 
         self.accumulate_population_data = accumulate_population_data
         self.cache_fitness = cache_fitness
@@ -155,16 +155,17 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
             # search for individuals in the first n-1 columns of the dataframe
             # the last column is the fitness
             df = self.df
+            
             for ind in individuals:
                 if ind.vector in df.values[:, :-1]:
-                    # set the fitness of the individual to the fitness in the dataframe
-                    ind.fitness.fitness = df[df.values[:, :-1] == ind.vector].values[0][-1]
+                    ind.fitness.set_fitness(df[df.values[:, :-1] == ind.vector].values[0][-1])
             
-
-        # Evaluate the fitness and train the model incrementally
+        # Evaluate the fitness of the individuals that have not been evaluated yet
+        # (if caching is not enabled, this will be all individuals)
         eval_futures = [
             self.executor.submit(evaluator.evaluate, ind, individuals)
             for ind in individuals
+            if not ind.fitness.is_fitness_evaluated()
         ]
 
         # wait for all fitness values to be evaluated before continuing

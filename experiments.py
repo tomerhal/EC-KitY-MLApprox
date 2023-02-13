@@ -59,7 +59,7 @@ def create_evoml_clf(n_features, model_type, model_params) -> SKClassifier:
             population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=10,
                                                              gen_sample_step=1,
                                                              accumulate_population_data=True,
-                                                             cache_fitness=True,
+                                                             cache_fitness=False,
                                                              model_type=model_type,
                                                              model_params=model_params),
             max_workers=1,
