@@ -15,24 +15,25 @@ import sys
 sys.path.append('..')
 from approx_ml_pop_eval import ApproxMLPopulationEvaluator
 
+models_params = {
+	SGDRegressor: {'max_iter': 1000, 'tol': 1e-3, 'random_state': 0},
+	LinearRegression: {},
+	KNeighborsRegressor: {'n_neighbors': 3}
+}
 
 class TestApproxMLPopulationEvaluator:
+	def _generate_vectors(self, n, bounds, length):
+		vecs = [Vector(SimpleFitness(random.random()), bounds) for i in range(n)]
+		a, b = bounds
+		for ind in vecs:
+			ind.set_vector([random.randint(a, b) for _ in range(length)])
+		return vecs
+	
 	def test_model(self):
-		models_params = {
-			SGDRegressor: {'max_iter': 1000, 'tol': 1e-3, 'random_state': 0},
-			LinearRegression: {},
-			KNeighborsRegressor: {'n_neighbors': 3}
-		}
-
-		X_train = [Vector(SimpleFitness(random.random()), (i, i+1)) for i in range(10)]
-		for i, ind in enumerate(X_train):
-			ind.set_vector([i, i+1])
-
-		y_train = [ind.fitness.fitness for ind in X_train]
+		X_train = self._generate_vectors(10, (0, 9), 2)
+		y_train = [ind.get_pure_fitness() for ind in X_train]
 		
-		X_test = [Vector(SimpleFitness(random.random()), (i+10, i+11)) for i in range(2)]
-		for i, ind in enumerate(X_test):
-			ind.set_vector([i+10, i+11])
+		X_test = self._generate_vectors(2, (10, 19), 2)
 		y_test = [ind.fitness.fitness for ind in X_test]
 
 		for model_type, params in models_params.items():
@@ -45,4 +46,17 @@ class TestApproxMLPopulationEvaluator:
 
 			V_test = np.array([ind.vector for ind in X_test])
 			assert model.score(V_test, y_test) == pytest.approx(pop_eval.model.score(V_test, y_test))
-		
+
+	def test_accumulate_population_fitness(self):
+		for model_type, params in models_params.items():
+			pop_eval = ApproxMLPopulationEvaluator(
+				model_type=model_type,
+				model_params=params,
+				accumulate_population_data=True,
+				cache_fitness=True
+			)
+			individuals = self._generate_vectors(10, (0, 9), 2)
+			fitnesses = [ind.get_pure_fitness() for ind in individuals]
+			pop_eval.fit(individuals, fitnesses)
+			for ind, fitness in zip(individuals, fitnesses):
+				assert ind.vector + [fitness] in pop_eval.df.values

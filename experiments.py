@@ -57,8 +57,9 @@ def create_evoml_clf(n_features, model_type, model_params) -> SKClassifier:
                         ]),
             breeder=SimpleBreeder(),
             population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=10,
-                                                             gen_sample_step=2,
+                                                             gen_sample_step=1,
                                                              accumulate_population_data=True,
+                                                             cache_fitness=True,
                                                              model_type=model_type,
                                                              model_params=model_params),
             max_workers=1,
@@ -72,7 +73,7 @@ def create_evoml_clf(n_features, model_type, model_params) -> SKClassifier:
 def create_evo_clf(n_features) -> SKClassifier:
     evo = SimpleEvolution(
         Subpopulation(creators=GAFloatVectorCreator(length=n_features, bounds=(-1, 1)),
-                      population_size=10,
+                      population_size=100,
                       # user-defined fitness evaluation method
                       evaluator=LinCombClassificationfEvaluator(),
                       # maximization problem (fitness is balanced accuracy), so higher fitness is better

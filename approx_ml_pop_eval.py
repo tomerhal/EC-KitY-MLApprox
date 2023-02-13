@@ -90,7 +90,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         """
         eval_start_time = process_time()
         super()._evaluate(population)
-        should_approximate = self.should_approximate()
+        should_approximate = self.gen > 0 and self.should_approximate()
         for sub_population in population.sub_populations:
             if should_approximate:
                 self.approx_count += 1
@@ -114,7 +114,6 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
                 # Compute fitness scores of the whole population
                 fitnesses = self._evaluate_individuals(sub_population.individuals, sub_population.evaluator)
                 self.fit(sub_population.individuals, fitnesses)
-
 
         self.gen += 1
 
@@ -152,14 +151,14 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         List[float]
             list of fitness scores, with respect to the order of the individuals
         """
-        if self.cache_fitness:
+        if self.gen > 0 and self.cache_fitness:
             # search for individuals in the first n-1 columns of the dataframe
             # the last column is the fitness
             df = self.df
             for ind in individuals:
                 if ind.vector in df.values[:, :-1]:
                     # set the fitness of the individual to the fitness in the dataframe
-                    ind.fitness.set_fitness(df[df.values[:, :-1] == ind.vector].values[0][-1])
+                    ind.fitness.fitness = df[df.values[:, :-1] == ind.vector].values[0][-1]
             
 
         # Evaluate the fitness and train the model incrementally
