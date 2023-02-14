@@ -8,6 +8,8 @@ from time import process_time
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import SGDRegressor, LinearRegression, Ridge
 
 from eckity.algorithms.simple_evolution import SimpleEvolution
 from eckity.breeders.simple_breeder import SimpleBreeder
@@ -16,6 +18,7 @@ from eckity.creators.ga_creators.float_vector_creator import GAFloatVectorCreato
 
 from approx_statistics import ApproxStatistics
 from plot_statistics import PlotStatistics
+from utils import *
 
 from eckity.genetic_operators.selections.tournament_selection import TournamentSelection
 from eckity.genetic_operators.crossovers.vector_k_point_crossover import VectorKPointsCrossover
@@ -38,24 +41,29 @@ def main():
 
     evoml_start_time = process_time()
 
+    dsname = 'magic'
+    model_type = Ridge
+    model_params = {'alpha': 100}
+
     # load the magic dataset
-    X, y = fetch_data('magic',return_X_y=True, local_cache_dir='./')
+    X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='./')
     # split the dataset to train and test set
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
     sc = StandardScaler()
     X_train = sc.fit_transform(X_train) # scaled data has mean 0 and variance 1 (only over training set)
     X_test = sc.transform(X_test) # use same scaler as one fitted to training data
-    Evaluator = LinCombClassificationfEvaluator()
+    
+    ind_eval = LinCombClassificationfEvaluator()
 
     evoml = SimpleEvolution(
         Subpopulation(creators=GAFloatVectorCreator(length=X.shape[1], bounds=(-1, 1)),
                       population_size=100,
                       # user-defined fitness evaluation method
-                      evaluator=Evaluator,
+                      evaluator=ind_eval,
                       # maximization problem (fitness is sum of values), so higher fitness is better
                       higher_is_better=True,
-                      elitism_rate=0.04,
+                      elitism_rate=0.0,
                       # genetic operators sequence to be applied in each generation
                       operators_sequence=[
                         VectorKPointsCrossover(probability=0.7, k=2),
@@ -67,17 +75,25 @@ def main():
                           (TournamentSelection(tournament_size=4, higher_is_better=True), 1)
                       ]),
         breeder=SimpleBreeder(),
-        population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=10, accumulate_population_data=True),
+        population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=50,
+                                                             gen_sample_step=1,
+                                                             accumulate_population_data=False,
+                                                             cache_fitness=False,
+                                                             model_type=model_type,
+                                                             model_params=model_params,
+                                                             should_approximate=lambda eval: eval.approx_fitness_error < thresholds[dsname]),
         max_workers=1,
         max_generation=100,
-        statistics=PlotStatistics(),#ApproxStatistics(Evaluator),
-        termination_checker=ThresholdFromSaturationTerminationChecker(10,0.005)
+        statistics=ApproxStatistics(ind_eval) #PlotStatistics(),
+        # termination_checker=ThresholdFromSaturationTerminationChecker(saturation_time=40, threshold=0.005)
     )
     # wrap the basic evolutionary algorithm with a sklearn-compatible classifier
     evoml_classifier = SKClassifier(evoml)
 
     # train the classifier
     evoml_classifier.fit(X_train, y_train)
+
+    print(f'Approximations: {(evoml_classifier.algorithm.population_evaluator.approx_count / evoml_classifier.algorithm.max_generation) * 100}%')
 
     # calculate the accuracy of the classifier
     y_pred = evoml_classifier.predict(X_test)

@@ -37,7 +37,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         whether to accumulate the population data for the model, by default False
     """
     def __init__(self,
-                approx_condition: callable = None,
+                should_approximate: callable = None,
                 population_sample_size=10,
                 gen_sample_step=1,
                 scoring=mean_absolute_error,
@@ -67,8 +67,9 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
 
         self.approx_count = 0
 
-        if approx_condition is None:
-            self.should_approximate = lambda: self.approx_fitness_error < 0.0375
+        if should_approximate is None:
+            should_approximate = lambda eval: eval.approx_fitness_error < 0.1
+        self.should_approximate = should_approximate
 
         if accumulate_population_data:
             self.df = None
@@ -90,7 +91,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         """
         eval_start_time = process_time()
         super()._evaluate(population)
-        should_approximate = self.gen > 0 and self.should_approximate()
+        should_approximate = self.gen > 0 and self.should_approximate(self)
         for sub_population in population.sub_populations:
             if should_approximate:
                 self.approx_count += 1

@@ -47,5 +47,4 @@ class ThresholdFromSaturationTerminationChecker(TerminationChecker):
         """
         self.saturation_time_history.pop()
         self.saturation_time_history.insert(0,best_individual.get_pure_fitness())
-        print(self.saturation_time_history)
         return (max(self.saturation_time_history) - min(self.saturation_time_history)) <= self.threshold

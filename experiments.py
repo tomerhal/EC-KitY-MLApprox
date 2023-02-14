@@ -3,14 +3,14 @@ My Teza.
 """
 
 import numpy as np
-from sys import stdin
 from pathlib import Path
 import os
 
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import SGDRegressor
+from sklearn.linear_model import SGDRegressor, LinearRegression, Ridge
+from sklearn.ensemble import RandomForestRegressor
 
 from eckity.algorithms.simple_evolution import SimpleEvolution
 from eckity.breeders.simple_breeder import SimpleBreeder
@@ -32,11 +32,12 @@ from approx_ml_pop_eval import ApproxMLPopulationEvaluator
 from lin_comb_clf_eval import LinCombClassificationfEvaluator
 from plot_statistics import PlotStatistics
 from timed_population_evaluator import TimedPopulationEvaluator
+from utils import *
 
 def scoring(y_true, y_pred):
     return balanced_accuracy_score(y_true, y_pred)
 
-def create_evoml_clf(n_features, model_type, model_params) -> SKClassifier:
+def create_evoml_clf(n_features, model_type, model_params, dsname) -> SKClassifier:
     evoml = SimpleEvolution(
             Subpopulation(creators=GAFloatVectorCreator(length=n_features, bounds=(-1, 1)),
                         population_size=100,
@@ -56,12 +57,13 @@ def create_evoml_clf(n_features, model_type, model_params) -> SKClassifier:
                             (TournamentSelection(tournament_size=4, higher_is_better=True), 1)
                         ]),
             breeder=SimpleBreeder(),
-            population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=10,
+            population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=50,
                                                              gen_sample_step=1,
-                                                             accumulate_population_data=True,
+                                                             accumulate_population_data=False,
                                                              cache_fitness=False,
                                                              model_type=model_type,
-                                                             model_params=model_params),
+                                                             model_params=model_params,
+                                                             should_approximate=lambda eval: eval.approx_fitness_error < thresholds[dsname]),
             max_workers=1,
             max_generation=100,
             statistics=PlotStatistics()
@@ -104,9 +106,9 @@ def fprint(fname, s):
     # if stdin.isatty(): print(s) # running interactively 
     with open(Path(fname),'a') as f: f.write(s)
 
-def save_params(fname, dsname, n_replicates, n_samples, n_features, model, model_params):
+def save_params(fname, dsname, n_replicates, n_samples, n_features, model, model_params, approx_eval):
     fprint(fname, f' dsname: {dsname}\n n_samples: {n_samples}\n n_features: {n_features:}\n n_replicates: {n_replicates}\n\
-model: {model.__name__}\n model params: {model_params}\n\n')
+ model: {model.__name__}\n model params: {model_params}\n approx threshold: {thresholds[dsname]}\n\n')
 
 def get_args():
     parser = ArgumentParser()
@@ -140,8 +142,8 @@ def main():
     start_time = process_time()
     fname, dsname, n_replicates = get_args()
 
-    model_type = SGDRegressor
-    model_params = {'max_iter': 1000, 'tol': 1e-3}
+    model_type = Ridge
+    model_params = {'alpha': 10}
 
     # load the dataset
     X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='./')
@@ -153,7 +155,7 @@ def main():
         allreps[k] = {'test_scores': [], 'full_times': [], 'eval_times': []}
 
     for rep in range(1, n_replicates + 1):
-        evo_clf, evoml_clf = create_evo_clf(n_features), create_evoml_clf(n_features, model_type, model_params)
+        evo_clf, evoml_clf = create_evo_clf(n_features), create_evoml_clf(n_features, model_type, model_params, dsname)
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
         sc = StandardScaler()
         X_train = sc.fit_transform(X_train) # scaled data has mean 0 and variance 1 (only over training set)
@@ -164,7 +166,7 @@ def main():
             clf.fit(X_train, y_train)
 
             if clf == evoml_clf:
-                print(f'Approximations: {(clf.algorithm.population_evaluator.approx_count / clf.algorithm.max_generation) * 100}%')
+                print(f'Approximations: {(clf.algorithm.population_evaluator.approx_count / clf.algorithm.generation_num) * 100}%')
 
             y_pred = clf.predict(X_test)
             test_score = scoring(y_test, y_pred)
@@ -181,7 +183,7 @@ def main():
             fprint(fname, f'rep {rep}, {clf_name}, score: {round(test_score,3)}, eval_time: {eval_time}, total time: {clf_end_time}\n')
         
     medians = [[clf, np.median(allreps[clf]['test_scores'])] for clf in ['Evo', 'EvoML']]
-    medians = sorted(medians, key=itemgetter(1), reverse=False)
+    medians = sorted(medians, key=itemgetter(1), reverse=True)
         
     # 10,000-round permutation test to assess statistical significance of diff in test scores between 1st and 2nd places
     pval = permutation_test(allreps[medians[0][0]]['test_scores'], allreps[medians[1][0]]['test_scores'], method='approximate', num_rounds=10_000,\
@@ -194,7 +196,7 @@ def main():
         pp = '=='
 
     s_res = f'*>> {dsname}, '
-    for i, m in enumerate(medians): 
+    for i, m in enumerate(medians):
         s_res += f'#{i+1}: {m[0]} {round(m[1],4)}'
         if m[0]=='EvoML':
             s_res += pp

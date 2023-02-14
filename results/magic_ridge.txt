@@ -1,0 +1,29 @@
+dsname: magic
+ n_samples: 19020
+ n_features: 10
+ n_replicates: 10
+model: Ridge
+ model params: {'alpha': 10}
+
+rep 1, Evo, score: 0.776, eval_time: 49.046875, total time: 52.09375
+rep 1, EvoML, score: 0.776, eval_time: 24.4375, total time: 27.796875
+rep 2, Evo, score: 0.769, eval_time: 48.984375, total time: 52.21875
+rep 2, EvoML, score: 0.696, eval_time: 25.875, total time: 29.234375
+rep 3, Evo, score: 0.777, eval_time: 52.296875, total time: 55.765625
+rep 3, EvoML, score: 0.778, eval_time: 25.140625, total time: 28.390625
+rep 4, Evo, score: 0.764, eval_time: 48.765625, total time: 52.140625
+rep 4, EvoML, score: 0.775, eval_time: 25.1875, total time: 28.546875
+rep 5, Evo, score: 0.768, eval_time: 48.265625, total time: 51.546875
+rep 5, EvoML, score: 0.657, eval_time: 23.828125, total time: 26.921875
+rep 6, Evo, score: 0.767, eval_time: 49.375, total time: 52.703125
+rep 6, EvoML, score: 0.767, eval_time: 26.328125, total time: 29.671875
+rep 7, Evo, score: 0.764, eval_time: 48.578125, total time: 51.734375
+rep 7, EvoML, score: 0.77, eval_time: 24.984375, total time: 28.40625
+rep 8, Evo, score: 0.781, eval_time: 48.15625, total time: 51.359375
+rep 8, EvoML, score: 0.776, eval_time: 23.984375, total time: 27.1875
+rep 9, Evo, score: 0.771, eval_time: 47.203125, total time: 50.421875
+rep 9, EvoML, score: 0.761, eval_time: 23.78125, total time: 27.015625
+rep 10, Evo, score: 0.77, eval_time: 46.96875, total time: 50.109375
+rep 10, EvoML, score: 0.769, eval_time: 24.5, total time: 27.84375
+*>> magic, #1: Evo 0.7697, #2: EvoML 0.7693==
+*runtime 803.8125
