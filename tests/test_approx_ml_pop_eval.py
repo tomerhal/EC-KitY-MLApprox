@@ -5,7 +5,7 @@ import pytest
 import random
 import numpy as np
 
-from sklearn.linear_model import SGDRegressor, LinearRegression
+from sklearn.linear_model import SGDRegressor, LinearRegression, Ridge
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
@@ -19,7 +19,8 @@ from approx_ml_pop_eval import ApproxMLPopulationEvaluator
 models_params = {
 	SGDRegressor: {'max_iter': 1000, 'tol': 1e-3, 'random_state': 0},
 	LinearRegression: {},
-	KNeighborsRegressor: {'n_neighbors': 3}
+	KNeighborsRegressor: {'n_neighbors': 5},
+	Ridge: {'alpha': 100.0}
 }
 
 class TestApproxMLPopulationEvaluator:
@@ -31,10 +32,10 @@ class TestApproxMLPopulationEvaluator:
 		return vecs
 	
 	def test_model(self):
-		X_train = self._generate_vectors(10, (0, 9), 2)
+		X_train = self._generate_vectors(n=10, bounds=(0, 9), length=2)
 		y_train = [ind.get_pure_fitness() for ind in X_train]
 		
-		X_test = self._generate_vectors(2, (10, 19), 2)
+		X_test = self._generate_vectors(n=2, bounds=(0, 9), length=2)
 		y_test = [ind.fitness.fitness for ind in X_test]
 
 		for model_type, params in models_params.items():
@@ -56,7 +57,7 @@ class TestApproxMLPopulationEvaluator:
 				accumulate_population_data=True,
 				cache_fitness=True
 			)
-			individuals = self._generate_vectors(10, (0, 9), 2)
+			individuals = self._generate_vectors(n=10, bounds=(0, 9), length=2)
 			fitnesses = [ind.get_pure_fitness() for ind in individuals]
 			pop_eval.fit(individuals, fitnesses)
 			for ind, fitness in zip(individuals, fitnesses):
@@ -70,9 +71,9 @@ class TestApproxMLPopulationEvaluator:
 					model_params=params,
 					scoring=metric
 				)
-				X_train = self._generate_vectors(10, (0, 9), 2)
+				X_train = self._generate_vectors(n=10, bounds=(0, 9), length=2)
 				y_train = [ind.get_pure_fitness() for ind in X_train]				
-				X_test = self._generate_vectors(2, (10, 19), 2)
+				X_test = self._generate_vectors(n=2, bounds=(0, 9), length=2)
 				y_test = [ind.fitness.fitness for ind in X_test]
 
 				pop_eval.fit(X_train, y_train)

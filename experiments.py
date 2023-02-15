@@ -57,7 +57,7 @@ def create_evoml_clf(n_features, model_type, model_params, dsname) -> SKClassifi
                             (TournamentSelection(tournament_size=4, higher_is_better=True), 1)
                         ]),
             breeder=SimpleBreeder(),
-            population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=50,
+            population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=20,
                                                              gen_sample_step=1,
                                                              accumulate_population_data=False,
                                                              cache_fitness=False,
@@ -106,7 +106,7 @@ def fprint(fname, s):
     # if stdin.isatty(): print(s) # running interactively 
     with open(Path(fname),'a') as f: f.write(s)
 
-def save_params(fname, dsname, n_replicates, n_samples, n_features, model, model_params, approx_eval):
+def save_params(fname, dsname, n_replicates, n_samples, n_features, model, model_params):
     fprint(fname, f' dsname: {dsname}\n n_samples: {n_samples}\n n_features: {n_features:}\n n_replicates: {n_replicates}\n\
  model: {model.__name__}\n model params: {model_params}\n approx threshold: {thresholds[dsname]}\n\n')
 
@@ -143,10 +143,10 @@ def main():
     fname, dsname, n_replicates = get_args()
 
     model_type = Ridge
-    model_params = {'alpha': 10}
+    model_params = {'alpha': 100}
 
     # load the dataset
-    X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='./')
+    X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='datasets')
     n_samples, n_features = X.shape
     save_params(fname, dsname, n_replicates, n_samples, n_features, model_type, model_params)
 
@@ -166,7 +166,7 @@ def main():
             clf.fit(X_train, y_train)
 
             if clf == evoml_clf:
-                print(f'Approximations: {(clf.algorithm.population_evaluator.approx_count / clf.algorithm.generation_num) * 100}%')
+                print('Approximations:', clf.algorithm.population_evaluator.approx_count / clf.algorithm.generation_num)
 
             y_pred = clf.predict(X_test)
             test_score = scoring(y_test, y_pred)

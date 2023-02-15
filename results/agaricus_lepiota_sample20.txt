@@ -1,0 +1,71 @@
+ dsname: agaricus_lepiota
+ n_samples: 8145
+ n_features: 22
+ n_replicates: 30
+ model: Ridge
+ model params: {'alpha': 100}
+ approx threshold: 0.1
+ sample 20 individuals each generation
+
+rep 1, Evo, score: 0.947, eval_time: 30.9375, total time: 34.3125
+rep 1, EvoML, score: 0.909, eval_time: 6.40625, total time: 9.21875
+rep 2, Evo, score: 0.953, eval_time: 28.234375, total time: 30.921875
+rep 2, EvoML, score: 0.918, eval_time: 6.65625, total time: 9.75
+rep 3, Evo, score: 0.947, eval_time: 28.953125, total time: 32.109375
+rep 3, EvoML, score: 0.922, eval_time: 8.203125, total time: 12.796875
+rep 4, Evo, score: 0.947, eval_time: 31.21875, total time: 34.84375
+rep 4, EvoML, score: 0.906, eval_time: 6.203125, total time: 9.140625
+rep 5, Evo, score: 0.951, eval_time: 27.203125, total time: 30.0625
+rep 5, EvoML, score: 0.908, eval_time: 6.4375, total time: 9.390625
+rep 6, Evo, score: 0.953, eval_time: 27.984375, total time: 30.828125
+rep 6, EvoML, score: 0.893, eval_time: 5.984375, total time: 9.078125
+rep 7, Evo, score: 0.945, eval_time: 26.78125, total time: 29.65625
+rep 7, EvoML, score: 0.884, eval_time: 6.671875, total time: 9.953125
+rep 8, Evo, score: 0.956, eval_time: 28.234375, total time: 31.1875
+rep 8, EvoML, score: 0.916, eval_time: 6.859375, total time: 10.203125
+rep 9, Evo, score: 0.95, eval_time: 28.359375, total time: 31.328125
+rep 9, EvoML, score: 0.908, eval_time: 6.53125, total time: 9.921875
+rep 10, Evo, score: 0.937, eval_time: 28.09375, total time: 31.171875
+rep 10, EvoML, score: 0.91, eval_time: 6.609375, total time: 9.828125
+rep 11, Evo, score: 0.951, eval_time: 28.375, total time: 31.859375
+rep 11, EvoML, score: 0.919, eval_time: 6.484375, total time: 9.75
+rep 12, Evo, score: 0.96, eval_time: 29.296875, total time: 32.0625
+rep 12, EvoML, score: 0.907, eval_time: 7.25, total time: 10.875
+rep 13, Evo, score: 0.965, eval_time: 29.125, total time: 32.234375
+rep 13, EvoML, score: 0.901, eval_time: 6.546875, total time: 10.15625
+rep 14, Evo, score: 0.951, eval_time: 30.28125, total time: 33.875
+rep 14, EvoML, score: 0.904, eval_time: 7.765625, total time: 12.625
+rep 15, Evo, score: 0.947, eval_time: 35.453125, total time: 39.875
+rep 15, EvoML, score: 0.89, eval_time: 7.8125, total time: 12.046875
+rep 16, Evo, score: 0.949, eval_time: 31.515625, total time: 35.09375
+rep 16, EvoML, score: 0.9, eval_time: 6.5625, total time: 10.0
+rep 17, Evo, score: 0.955, eval_time: 31.265625, total time: 34.890625
+rep 17, EvoML, score: 0.922, eval_time: 7.5625, total time: 11.421875
+rep 18, Evo, score: 0.953, eval_time: 30.53125, total time: 33.578125
+rep 18, EvoML, score: 0.919, eval_time: 7.671875, total time: 11.75
+rep 19, Evo, score: 0.948, eval_time: 31.796875, total time: 35.296875
+rep 19, EvoML, score: 0.906, eval_time: 7.15625, total time: 10.65625
+rep 20, Evo, score: 0.942, eval_time: 33.015625, total time: 37.03125
+rep 20, EvoML, score: 0.926, eval_time: 8.015625, total time: 12.4375
+rep 21, Evo, score: 0.946, eval_time: 32.046875, total time: 35.609375
+rep 21, EvoML, score: 0.917, eval_time: 6.859375, total time: 10.125
+rep 22, Evo, score: 0.948, eval_time: 25.328125, total time: 27.984375
+rep 22, EvoML, score: 0.914, eval_time: 6.046875, total time: 8.5625
+rep 23, Evo, score: 0.946, eval_time: 27.6875, total time: 30.78125
+rep 23, EvoML, score: 0.893, eval_time: 6.71875, total time: 10.171875
+rep 24, Evo, score: 0.962, eval_time: 27.890625, total time: 30.875
+rep 24, EvoML, score: 0.912, eval_time: 6.515625, total time: 9.71875
+rep 25, Evo, score: 0.943, eval_time: 30.484375, total time: 34.296875
+rep 25, EvoML, score: 0.896, eval_time: 6.140625, total time: 9.34375
+rep 26, Evo, score: 0.949, eval_time: 32.484375, total time: 36.109375
+rep 26, EvoML, score: 0.897, eval_time: 7.234375, total time: 10.9375
+rep 27, Evo, score: 0.943, eval_time: 32.46875, total time: 35.96875
+rep 27, EvoML, score: 0.9, eval_time: 7.34375, total time: 11.21875
+rep 28, Evo, score: 0.953, eval_time: 33.328125, total time: 37.15625
+rep 28, EvoML, score: 0.911, eval_time: 8.28125, total time: 12.34375
+rep 29, Evo, score: 0.959, eval_time: 34.609375, total time: 38.40625
+rep 29, EvoML, score: 0.926, eval_time: 7.953125, total time: 11.8125
+rep 30, Evo, score: 0.955, eval_time: 30.0625, total time: 33.328125
+rep 30, EvoML, score: 0.906, eval_time: 7.09375, total time: 10.9375
+*>> agaricus_lepiota, #1: Evo 0.9491, #2: EvoML 0.9082
+*runtime 1322.09375

@@ -41,11 +41,11 @@ def main():
 
     evoml_start_time = process_time()
 
-    dsname = 'magic'
+    dsname = 'coil2000'
     model_type = Ridge
     model_params = {'alpha': 100}
 
-    # load the magic dataset
+    # load the dataset
     X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='./')
     # split the dataset to train and test set
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
@@ -93,7 +93,7 @@ def main():
     # train the classifier
     evoml_classifier.fit(X_train, y_train)
 
-    print(f'Approximations: {(evoml_classifier.algorithm.population_evaluator.approx_count / evoml_classifier.algorithm.max_generation) * 100}%')
+    print(f'Approximations: {evoml_classifier.algorithm.population_evaluator.approx_count / evoml_classifier.algorithm.max_generation}')
 
     # calculate the accuracy of the classifier
     y_pred = evoml_classifier.predict(X_test)
