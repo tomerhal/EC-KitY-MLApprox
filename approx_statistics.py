@@ -35,16 +35,23 @@ class ApproxStatistics(Statistics):
         self.median_approx_fitnesses = []
         self.max_approx_fitnesses = []
         self.min_approx_fitnesses = []
+        self.approx_errors = []
         super().__init__(format_string, output_stream)
 
     def write_statistics(self, sender, data_dict):
         sub_pop = data_dict['population'].sub_populations[0]
+        pop_eval = sender.population_evaluator
+
         #approx fitness
         approx_fitnesses = np.array([ind.get_pure_fitness() for ind in sub_pop.individuals])
         self.mean_approx_fitnesses.append(np.mean(approx_fitnesses))
         self.median_approx_fitnesses.append(np.median(approx_fitnesses))
         self.max_approx_fitnesses.append(np.max(approx_fitnesses))
         self.min_approx_fitnesses.append(np.min(approx_fitnesses))
+
+        # model error
+        self.approx_errors.append(pop_eval.approx_fitness_error)
+
         #real fitness
         for ind in sub_pop.individuals:
             ind.set_fitness_not_evaluated()
@@ -59,15 +66,14 @@ class ApproxStatistics(Statistics):
             ind.set_fitness_not_evaluated()
             ind.fitness.set_fitness(approx_fitnesses[i])
 
-    # TODO tostring to indiv
-
-    def plot_statistics(self):
+    def plot_statistics(self, dsname, model_type, model_params):
         assert len(self.mean_fitnesses) == len(self.median_fitnesses) == \
                len(self.max_fitnesses) == len(self.min_fitnesses) == \
                len(self.mean_approx_fitnesses) == len(self.median_approx_fitnesses) == \
                len(self.max_approx_fitnesses) == len(self.min_approx_fitnesses), \
                'Statistics lists are not the same length'
 
+        plt.title(f'{dsname} {model_type.__name__} {model_params}')
         plt.plot(self.mean_approx_fitnesses, label='approx mean')
         plt.plot(self.median_approx_fitnesses, label='approx median')
         plt.plot(self.max_approx_fitnesses, label='approx max')
@@ -76,6 +82,7 @@ class ApproxStatistics(Statistics):
         plt.plot(self.median_fitnesses, label='median')
         plt.plot(self.max_fitnesses, label='max')
         plt.plot(self.min_fitnesses, label='min')
+        plt.plot(self.approx_errors, label='approx error')
         plt.xlabel('generation')
         plt.ylabel('fitness')
         plt.xticks(range(0, len(self.mean_fitnesses) + 1, 5))

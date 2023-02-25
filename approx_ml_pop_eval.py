@@ -104,8 +104,6 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
                     # Sample a subset of the population and compute their fitness
                     sample_size = self.population_sample_size if isinstance(self.population_sample_size, int) else int(len(sub_population.individuals) * self.population_sample_size)
                     sample_inds = random.sample(sub_population.individuals, sample_size)
-                    for ind in sample_inds:
-                        ind.set_fitness_not_evaluated()
                     fitnesses = self._evaluate_individuals(sample_inds, sub_population.evaluator)
 
                     # update the model's performance
@@ -114,6 +112,8 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
             else:
                 # Compute fitness scores of the whole population
                 fitnesses = self._evaluate_individuals(sub_population.individuals, sub_population.evaluator)
+                for i, ind in enumerate(sub_population.individuals):
+                    ind.fitness.set_fitness(fitnesses[i])
                 self.fit(sub_population.individuals, fitnesses)
 
         self.gen += 1
@@ -164,16 +164,11 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         # Evaluate the fitness of the individuals that have not been evaluated yet
         # (if caching is not enabled, this will be all individuals)
         eval_futures = [
-            self.executor.submit(evaluator.evaluate, ind, individuals)
+            self.executor.submit(evaluator._evaluate_individual, ind)
             for ind in individuals
-            if not ind.fitness.is_fitness_evaluated()
         ]
 
-        # wait for all fitness values to be evaluated before continuing
-        for future in eval_futures:
-            future.result()
-
-        fitnesses = [ind.get_pure_fitness() for ind in individuals]
+        fitnesses = [future.result() for future in eval_futures]
         return fitnesses
 
     def fit(self, individuals: List[Individual], fitnesses: List[float]) -> RegressorMixin:

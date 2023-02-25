@@ -1,7 +1,3 @@
-"""
-My Teza.
-"""
-
 import numpy as np
 from pathlib import Path
 import os
@@ -57,9 +53,9 @@ def create_evoml_clf(n_features, model_type, model_params, dsname) -> SKClassifi
                             (TournamentSelection(tournament_size=4, higher_is_better=True), 1)
                         ]),
             breeder=SimpleBreeder(),
-            population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=20,
+            population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=100,
                                                              gen_sample_step=1,
-                                                             accumulate_population_data=False,
+                                                             accumulate_population_data=True,
                                                              cache_fitness=False,
                                                              model_type=model_type,
                                                              model_params=model_params,
@@ -112,7 +108,7 @@ def save_params(fname, dsname, n_replicates, n_samples, n_features, model, model
 
 def get_args():
     parser = ArgumentParser()
-    parser.add_argument('-resdir', dest='resdir', type=str, action='store', help='directory where results are placed', default='.')
+    parser.add_argument('-resdir', dest='resdir', type=str, action='store', help='directory where results are placed', default='results')
     parser.add_argument('-dsname', dest='dsname', type=str, action='store', help='dataset name')
     parser.add_argument('-nrep', dest='n_replicates', type=int, action='store', help='number of replicate runs')
     args = parser.parse_args()
@@ -143,7 +139,7 @@ def main():
     fname, dsname, n_replicates = get_args()
 
     model_type = Ridge
-    model_params = {'alpha': 100}
+    model_params = {'alpha': 300}
 
     # load the dataset
     X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='datasets')
@@ -153,6 +149,7 @@ def main():
     allreps = dict.fromkeys(['Evo', 'EvoML']) # for recording scores and params across all replicates
     for k in allreps: 
         allreps[k] = {'test_scores': [], 'full_times': [], 'eval_times': []}
+    approximations = []
 
     for rep in range(1, n_replicates + 1):
         evo_clf, evoml_clf = create_evo_clf(n_features), create_evoml_clf(n_features, model_type, model_params, dsname)
@@ -166,7 +163,7 @@ def main():
             clf.fit(X_train, y_train)
 
             if clf == evoml_clf:
-                print('Approximations:', clf.algorithm.population_evaluator.approx_count / clf.algorithm.generation_num)
+                approximations.append(clf.algorithm.population_evaluator.approx_count / clf.algorithm.generation_num)
 
             y_pred = clf.predict(X_test)
             test_score = scoring(y_test, y_pred)
@@ -204,8 +201,10 @@ def main():
 
     fprint(fname, s_res[:-2] + '\n')
 
+    fprint(fname, f'*Approximations: {round(np.mean(approximations), 3)}\n')
+
     runtime = process_time() - start_time
-    fprint(fname, f'*runtime {runtime}\n')
+    fprint(fname, f'*Runtime {runtime}\n')
 
 
 if __name__ == "__main__":

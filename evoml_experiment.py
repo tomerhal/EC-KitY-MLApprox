@@ -1,8 +1,5 @@
-"""
-My Teza.
-"""
-
 import numpy as np
+import sys
 from time import process_time
 
 from sklearn.metrics import balanced_accuracy_score
@@ -31,7 +28,7 @@ from lin_comb_clf_eval import LinCombClassificationfEvaluator
 from pmlb import fetch_data
 
 from approx_ml_pop_eval import ApproxMLPopulationEvaluator
-from threshold_from_saturation_termination_checker import ThresholdFromSaturationTerminationChecker
+from plato_termination_checker import PlatoTerminationChecker
 
 
 def main():
@@ -41,12 +38,17 @@ def main():
 
     evoml_start_time = process_time()
 
-    dsname = 'coil2000'
+    # parse system arguments
+    if len(sys.argv) < 2:
+        print("Usage: python evoml_experiment.py <dataset_name>")
+        exit(1)
+
+    dsname = sys.argv[1]
     model_type = Ridge
-    model_params = {'alpha': 100}
+    model_params = {'alpha': 500}
 
     # load the dataset
-    X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='./')
+    X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='datasets')
     # split the dataset to train and test set
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
@@ -77,7 +79,7 @@ def main():
         breeder=SimpleBreeder(),
         population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=50,
                                                              gen_sample_step=1,
-                                                             accumulate_population_data=False,
+                                                             accumulate_population_data=True,
                                                              cache_fitness=False,
                                                              model_type=model_type,
                                                              model_params=model_params,
@@ -104,7 +106,7 @@ def main():
     print('Total time:', evoml_time)
 
     plot_stats = evoml.statistics[0]
-    plot_stats.plot_statistics()
+    plot_stats.plot_statistics(dsname, model_type, model_params)
 
 
 if __name__ == "__main__":
