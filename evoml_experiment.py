@@ -45,7 +45,7 @@ def main():
 
     dsname = sys.argv[1]
     model_type = Ridge
-    model_params = {'alpha': 500}
+    model_params = {'alpha': 100}
 
     # load the dataset
     X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='datasets')
@@ -77,8 +77,8 @@ def main():
                           (TournamentSelection(tournament_size=4, higher_is_better=True), 1)
                       ]),
         breeder=SimpleBreeder(),
-        population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=50,
-                                                             gen_sample_step=1,
+        population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=100,
+                                                             gen_sample_step=5,
                                                              accumulate_population_data=True,
                                                              cache_fitness=False,
                                                              model_type=model_type,

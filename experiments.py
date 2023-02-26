@@ -54,7 +54,7 @@ def create_evoml_clf(n_features, model_type, model_params, dsname) -> SKClassifi
                         ]),
             breeder=SimpleBreeder(),
             population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=100,
-                                                             gen_sample_step=1,
+                                                             gen_sample_step=5,
                                                              accumulate_population_data=True,
                                                              cache_fitness=False,
                                                              model_type=model_type,
@@ -139,7 +139,7 @@ def main():
     fname, dsname, n_replicates = get_args()
 
     model_type = Ridge
-    model_params = {'alpha': 300}
+    model_params = {'alpha': 100}
 
     # load the dataset
     X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='datasets')
