@@ -1,0 +1,71 @@
+ dsname: mushroom
+ n_samples: 8124
+ n_features: 22
+ n_replicates: 30
+ model: Ridge
+ model params: {'alpha': 300}
+ approx threshold: 0.05
+
+rep 1, Evo, score: 0.952, eval_time: 19.328125, total time: 20.859375
+rep 1, EvoML, score: 0.886, eval_time: 19.765625, total time: 21.28125
+rep 2, Evo, score: 0.93, eval_time: 18.578125, total time: 20.15625
+rep 2, EvoML, score: 0.895, eval_time: 19.765625, total time: 21.421875
+rep 3, Evo, score: 0.934, eval_time: 19.09375, total time: 20.546875
+rep 3, EvoML, score: 0.894, eval_time: 19.1875, total time: 20.78125
+rep 4, Evo, score: 0.931, eval_time: 18.84375, total time: 20.59375
+rep 4, EvoML, score: 0.9, eval_time: 18.671875, total time: 20.34375
+rep 5, Evo, score: 0.957, eval_time: 18.484375, total time: 20.0
+rep 5, EvoML, score: 0.884, eval_time: 19.71875, total time: 21.328125
+rep 6, Evo, score: 0.952, eval_time: 18.78125, total time: 20.40625
+rep 6, EvoML, score: 0.898, eval_time: 19.4375, total time: 21.015625
+rep 7, Evo, score: 0.941, eval_time: 19.109375, total time: 20.625
+rep 7, EvoML, score: 0.898, eval_time: 19.359375, total time: 20.90625
+rep 8, Evo, score: 0.95, eval_time: 19.40625, total time: 20.828125
+rep 8, EvoML, score: 0.95, eval_time: 20.84375, total time: 22.375
+rep 9, Evo, score: 0.949, eval_time: 18.546875, total time: 20.171875
+rep 9, EvoML, score: 0.949, eval_time: 23.375, total time: 25.328125
+rep 10, Evo, score: 0.941, eval_time: 19.046875, total time: 20.625
+rep 10, EvoML, score: 0.882, eval_time: 19.921875, total time: 21.5
+rep 11, Evo, score: 0.941, eval_time: 18.828125, total time: 20.3125
+rep 11, EvoML, score: 0.893, eval_time: 19.53125, total time: 21.25
+rep 12, Evo, score: 0.955, eval_time: 19.03125, total time: 20.453125
+rep 12, EvoML, score: 0.892, eval_time: 19.421875, total time: 20.984375
+rep 13, Evo, score: 0.944, eval_time: 18.390625, total time: 19.875
+rep 13, EvoML, score: 0.878, eval_time: 19.53125, total time: 21.171875
+rep 14, Evo, score: 0.949, eval_time: 18.515625, total time: 19.984375
+rep 14, EvoML, score: 0.881, eval_time: 19.796875, total time: 21.296875
+rep 15, Evo, score: 0.938, eval_time: 19.109375, total time: 20.734375
+rep 15, EvoML, score: 0.88, eval_time: 20.3125, total time: 21.953125
+rep 16, Evo, score: 0.939, eval_time: 19.140625, total time: 20.640625
+rep 16, EvoML, score: 0.886, eval_time: 19.078125, total time: 20.640625
+rep 17, Evo, score: 0.946, eval_time: 19.078125, total time: 20.609375
+rep 17, EvoML, score: 0.896, eval_time: 19.828125, total time: 21.484375
+rep 18, Evo, score: 0.949, eval_time: 18.765625, total time: 20.3125
+rep 18, EvoML, score: 0.863, eval_time: 19.65625, total time: 21.234375
+rep 19, Evo, score: 0.928, eval_time: 18.34375, total time: 19.796875
+rep 19, EvoML, score: 0.862, eval_time: 18.6875, total time: 20.265625
+rep 20, Evo, score: 0.954, eval_time: 17.953125, total time: 19.4375
+rep 20, EvoML, score: 0.89, eval_time: 18.765625, total time: 20.328125
+rep 21, Evo, score: 0.947, eval_time: 18.171875, total time: 19.609375
+rep 21, EvoML, score: 0.899, eval_time: 18.953125, total time: 20.65625
+rep 22, Evo, score: 0.945, eval_time: 18.859375, total time: 20.59375
+rep 22, EvoML, score: 0.883, eval_time: 18.40625, total time: 20.03125
+rep 23, Evo, score: 0.961, eval_time: 17.90625, total time: 19.390625
+rep 23, EvoML, score: 0.891, eval_time: 18.546875, total time: 20.15625
+rep 24, Evo, score: 0.956, eval_time: 17.9375, total time: 19.453125
+rep 24, EvoML, score: 0.891, eval_time: 18.34375, total time: 19.90625
+rep 25, Evo, score: 0.944, eval_time: 20.109375, total time: 21.796875
+rep 25, EvoML, score: 0.893, eval_time: 18.734375, total time: 20.078125
+rep 26, Evo, score: 0.951, eval_time: 17.796875, total time: 19.359375
+rep 26, EvoML, score: 0.896, eval_time: 18.75, total time: 20.3125
+rep 27, Evo, score: 0.927, eval_time: 17.453125, total time: 18.96875
+rep 27, EvoML, score: 0.878, eval_time: 18.46875, total time: 20.109375
+rep 28, Evo, score: 0.967, eval_time: 17.71875, total time: 19.1875
+rep 28, EvoML, score: 0.894, eval_time: 18.171875, total time: 19.71875
+rep 29, Evo, score: 0.925, eval_time: 17.671875, total time: 19.15625
+rep 29, EvoML, score: 0.899, eval_time: 18.765625, total time: 20.28125
+rep 30, Evo, score: 0.95, eval_time: 18.0625, total time: 19.53125
+rep 30, EvoML, score: 0.903, eval_time: 19.203125, total time: 20.75
+*>> mushroom, #1: Evo 0.9465, #2: EvoML 0.8926
+*Approximations: 0.593
+*Runtime 1234.640625

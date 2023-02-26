@@ -37,19 +37,25 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         whether to accumulate the population data for the model, by default False
     """
     def __init__(self,
-                approx_condition: callable = None,
+                should_approximate: callable = None,
                 population_sample_size=10,
                 gen_sample_step=1,
                 scoring=mean_absolute_error,
                 model_type=SGDRegressor,
                 model_params=None,
-                accumulate_population_data=False):
+                accumulate_population_data=False,
+                cache_fitness=False):
         super().__init__()
         self.approx_fitness_error = float('inf')
         self.population_sample_size = population_sample_size
         self.gen_sample_step = gen_sample_step
         self.scoring = scoring
+
+        if cache_fitness and not accumulate_population_data:
+            raise ValueError('cache_fitness can only be enabled when accumulate_population_data is enabled')
+
         self.accumulate_population_data = accumulate_population_data
+        self.cache_fitness = cache_fitness
 
         if model_params is None:
             model_params = {}
@@ -61,8 +67,9 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
 
         self.approx_count = 0
 
-        if approx_condition is None:
-            self.should_approximate = lambda: self.approx_fitness_error < 0.0375
+        if should_approximate is None:
+            should_approximate = lambda eval: eval.approx_fitness_error < 0.1
+        self.should_approximate = should_approximate
 
         if accumulate_population_data:
             self.df = None
@@ -84,7 +91,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         """
         eval_start_time = process_time()
         super()._evaluate(population)
-        should_approximate = self.should_approximate()
+        should_approximate = self.gen > 0 and self.should_approximate(self)
         for sub_population in population.sub_populations:
             if should_approximate:
                 self.approx_count += 1
@@ -97,8 +104,6 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
                     # Sample a subset of the population and compute their fitness
                     sample_size = self.population_sample_size if isinstance(self.population_sample_size, int) else int(len(sub_population.individuals) * self.population_sample_size)
                     sample_inds = random.sample(sub_population.individuals, sample_size)
-                    for ind in sample_inds:
-                        ind.set_fitness_not_evaluated()
                     fitnesses = self._evaluate_individuals(sample_inds, sub_population.evaluator)
 
                     # update the model's performance
@@ -107,8 +112,9 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
             else:
                 # Compute fitness scores of the whole population
                 fitnesses = self._evaluate_individuals(sub_population.individuals, sub_population.evaluator)
+                for i, ind in enumerate(sub_population.individuals):
+                    ind.fitness.set_fitness(fitnesses[i])
                 self.fit(sub_population.individuals, fitnesses)
-
 
         self.gen += 1
 
@@ -146,17 +152,23 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         List[float]
             list of fitness scores, with respect to the order of the individuals
         """
-        # Evaluate the fitness and train the model incrementally
+        if self.gen > 0 and self.cache_fitness:
+            # search for individuals in the first n-1 columns of the dataframe
+            # the last column is the fitness
+            df = self.df
+            
+            for ind in individuals:
+                if ind.vector in df.values[:, :-1]:
+                    ind.fitness.set_fitness(df[df.values[:, :-1] == ind.vector].values[0][-1])
+            
+        # Evaluate the fitness of the individuals that have not been evaluated yet
+        # (if caching is not enabled, this will be all individuals)
         eval_futures = [
-            self.executor.submit(evaluator.evaluate, ind, individuals)
+            self.executor.submit(evaluator._evaluate_individual, ind)
             for ind in individuals
         ]
 
-        # wait for all fitness values to be evaluated before continuing
-        for future in eval_futures:
-            future.result()
-
-        fitnesses = [ind.get_pure_fitness() for ind in individuals]
+        fitnesses = [future.result() for future in eval_futures]
         return fitnesses
 
     def fit(self, individuals: List[Individual], fitnesses: List[float]) -> RegressorMixin:

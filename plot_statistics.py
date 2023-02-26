@@ -38,11 +38,12 @@ class PlotStatistics(Statistics):
         self.max_fitnesses.append(np.max(fitnesses))
         self.min_fitnesses.append(np.min(fitnesses))
 
-    def plot_statistics(self):
+    def plot_statistics(self, dsname, model_type, model_params):
         assert len(self.mean_fitnesses) == len(self.median_fitnesses) ==\
             len(self.max_fitnesses) == len(self.min_fitnesses), \
                 'Statistics lists are not the same length'
         
+        plt.title(f'{dsname} {model_type.__name__} {model_params}')
         plt.plot(self.mean_fitnesses, label='mean')
         plt.plot(self.median_fitnesses, label='median')
         plt.plot(self.max_fitnesses, label='max')

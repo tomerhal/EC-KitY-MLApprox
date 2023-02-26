@@ -11,7 +11,9 @@ class LinCombClassificationfEvaluator(ClassificationEvaluator):
         Classify a given individual's predictions on the dataset.
 
         The individual returns a a float value, that must be mapped to a class.
-        The mapping is done by calcualating the 
+        The mapping is done by calcualating the dot product between the individual's
+        vector and the dataset. If the dot product is greater than the threshold,
+        the individual is classified as 1, otherwise it is classified as 0.
 
         Parameters
         ----------
@@ -28,21 +30,5 @@ class LinCombClassificationfEvaluator(ClassificationEvaluator):
         return np.where(scores > CLASSIFICATION_THRESHOLD, 1, 0)
     
     def _evaluate_individual(self, individual):
-        """
-        Compute the fitness value by comparing the program tree execution result to the result vector y
-
-        Parameters
-        ----------
-        individual: Tree
-            An individual program tree in the GP population, whose fitness needs to be computed.
-            Makes use of GPTree.execute, which runs the program.
-            Calling `GPTree.execute` must use keyword arguments that match the terminal-set variables.
-            For example, if the terminal set includes `x` and `y` then the call is `GPTree.execute(x=..., y=...)`.
-
-        Returns
-        -------
-        float:
-            computed fitness value
-        """
         y_pred = self.classify_individual(individual)
         return balanced_accuracy_score(y_true=self.y, y_pred=y_pred)

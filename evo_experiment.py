@@ -26,7 +26,7 @@ from plot_statistics import PlotStatistics
 
 from pmlb import fetch_data
 
-from threshold_from_saturation_termination_checker import ThresholdFromSaturationTerminationChecker
+from plato_termination_checker import ThresholdFromSaturationTerminationChecker
 
 
 def main():
