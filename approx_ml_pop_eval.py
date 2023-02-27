@@ -44,7 +44,8 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
                 model_type=SGDRegressor,
                 model_params=None,
                 accumulate_population_data=False,
-                cache_fitness=False):
+                cache_fitness=False,
+                ensemble=False):
         super().__init__()
         self.approx_fitness_error = float('inf')
         self.population_sample_size = population_sample_size
@@ -56,6 +57,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
 
         self.accumulate_population_data = accumulate_population_data
         self.cache_fitness = cache_fitness
+        self.ensemble = ensemble
 
         if model_params is None:
             model_params = {}
@@ -73,6 +75,11 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
 
         if accumulate_population_data:
             self.df = None
+
+        if ensemble:
+            self.models = dict()
+
+        self.model_error_history = dict()
 
     @overrides
     def _evaluate(self, population: Population) -> Individual:
@@ -141,7 +148,9 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
     def _update_model_error(self, individuals: List[Individual], fitnesses):
         # update the model's performance
         err = self.eval(individuals, fitnesses)
-        self.approx_fitness_error = err
+        self.model_error_history[self.gen] = err
+        gens, errors = self.model_error_history.keys(), self.model_error_history.values()
+        self.approx_fitness_error = np.average(list(errors), weights=[gen + 1 for gen in gens])
     
     def _evaluate_individuals(self, individuals: List[Individual], evaluator: IndividualEvaluator) -> List[float]:
         """
@@ -178,14 +187,16 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
     
     def _update_dataframe(self, ind_vectors: List[List], fitnesses: List[float]):
         if self.df is None:
-                self.df = pd.DataFrame(np.array(ind_vectors))
-                self.df['fitness'] = np.array(fitnesses)
+            self.df = pd.DataFrame(np.array(ind_vectors))
+            self.df['fitness'] = np.array(fitnesses)
+            self.df['gen'] = self.gen
         else:
             df = pd.DataFrame(np.array(ind_vectors))
             df['fitness'] = np.array(fitnesses)
+            df['gen'] = self.gen
 
             self.df = pd.concat([self.df, df], ignore_index=True, copy=False)
-            n_features= self.df.shape[1] - 1
+            n_features= self.df.shape[1] - 2
 
             # if the same individual is evaluated multiple times, keep the last evaluation
             self.df.drop_duplicates(subset=range(n_features), keep='last', inplace=True)
@@ -204,11 +215,16 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
             Fitness scores of the individuals, repectively
         """
         self.model = self.model_type(**self.model_params)
+
+        # Add new model to the ensemble (if ensemble is enabled)
+        if self.ensemble:
+            self.models.update(self.gen, self.model)
+
         ind_vectors = [ind.get_vector() for ind in individuals]
         
         if self.accumulate_population_data:
             self._update_dataframe(ind_vectors, fitnesses)
-            X, y = self.df.iloc[:, :-1].to_numpy(), self.df.iloc[:, -1].to_numpy()
+            X, y = self.df.iloc[:, :-2].to_numpy(), self.df['fitness'].to_numpy()
         else:
             X, y = np.array(ind_vectors), np.array(fitnesses)
 
@@ -218,7 +234,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         scores = []
         kf = KFold(n_splits=5, shuffle=True)
         for train_index, test_index in kf.split(X):
-            self.model.fit(X[train_index], y[train_index])            
+            self.model.fit(X[train_index], y[train_index])      
             scores.append(self.scoring(y[test_index], self.model.predict(X[test_index])))
         self.approx_fitness_error = np.mean(scores)
 
@@ -239,6 +255,11 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
            Predicted target values per element in X.
         """
         ind_vectors = [ind.get_vector() for ind in individuals]
+
+        if self.ensemble:
+            weights = [gen + 1 for gen in self.models]
+            return np.average([model.predict(ind_vectors) for model in self.models.values()], weights=weights)
+
         return self.model.predict(ind_vectors)
 
     def eval(self, individuals: List[Individual], fitnesses: List[float]) -> float:
