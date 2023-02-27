@@ -66,6 +66,8 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         self.evaluation_time = 0
 
         self.approx_count = 0
+        self.gen_population = []
+        self.best_in_gen = None
 
         if should_approximate is None:
             should_approximate = lambda eval: eval.approx_fitness_error < 0.1
@@ -91,9 +93,14 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         """
         eval_start_time = process_time()
         super()._evaluate(population)
-        should_approximate = self.gen > 0 and self.should_approximate(self)
+        self.gen_population = population
+        if self.gen > 1:
+            should_approximate = self.should_approximate(self)
+        else:
+            should_approximate = False
         for sub_population in population.sub_populations:
             if should_approximate:
+
                 self.approx_count += 1
                 # Approximate fitness scores of the whole population
                 preds = self.predict(sub_population.individuals)
@@ -131,6 +138,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
 
         eval_end_time = process_time()
         self.evaluation_time += eval_end_time - eval_start_time
+        self.best_in_gen = best_ind
         return best_ind
     
     def _update_model_error(self, individuals: List[Individual], fitnesses):

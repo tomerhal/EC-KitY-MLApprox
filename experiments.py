@@ -26,6 +26,7 @@ from mlxtend.evaluate import permutation_test
 
 from approx_ml_pop_eval import ApproxMLPopulationEvaluator
 from lin_comb_clf_eval import LinCombClassificationfEvaluator
+from plato_termination_checker import PlatoTerminationChecker
 from plot_statistics import PlotStatistics
 from timed_population_evaluator import TimedPopulationEvaluator
 from utils import *
@@ -34,6 +35,7 @@ def scoring(y_true, y_pred):
     return balanced_accuracy_score(y_true, y_pred)
 
 def create_evoml_clf(n_features, model_type, model_params, dsname) -> SKClassifier:
+    plato_switch_checker = PlatoTerminationChecker()
     evoml = SimpleEvolution(
             Subpopulation(creators=GAFloatVectorCreator(length=n_features, bounds=(-1, 1)),
                         population_size=100,
@@ -53,13 +55,16 @@ def create_evoml_clf(n_features, model_type, model_params, dsname) -> SKClassifi
                             (TournamentSelection(tournament_size=4, higher_is_better=True), 1)
                         ]),
             breeder=SimpleBreeder(),
-            population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=100,
+            population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=50,
                                                              gen_sample_step=1,
                                                              accumulate_population_data=True,
                                                              cache_fitness=False,
                                                              model_type=model_type,
                                                              model_params=model_params,
-                                                             should_approximate=lambda eval: eval.approx_fitness_error < thresholds[dsname]),
+                                                             should_approximate=(lambda
+                                                             eval: plato_switch_checker.should_terminate(
+                                                             eval.gen_population,
+                                                             eval.best_in_gen, eval.gen))),
             max_workers=1,
             max_generation=100,
             statistics=PlotStatistics()
@@ -139,7 +144,7 @@ def main():
     fname, dsname, n_replicates = get_args()
 
     model_type = Ridge
-    model_params = {'alpha': 300}
+    model_params = {'alpha': 0.1}
 
     # load the dataset
     X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='datasets')

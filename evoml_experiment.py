@@ -30,7 +30,7 @@ from pmlb import fetch_data
 from approx_ml_pop_eval import ApproxMLPopulationEvaluator
 from plato_termination_checker import PlatoTerminationChecker
 
-
+got_to_plato = False
 def main():
     """
     Basic setup.
@@ -45,7 +45,7 @@ def main():
 
     dsname = sys.argv[1]
     model_type = Ridge
-    model_params = {'alpha': 500}
+    model_params = {'alpha': 0.07}
 
     # load the dataset
     X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='datasets')
@@ -53,10 +53,19 @@ def main():
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
     sc = StandardScaler()
-    X_train = sc.fit_transform(X_train) # scaled data has mean 0 and variance 1 (only over training set)
-    X_test = sc.transform(X_test) # use same scaler as one fitted to training data
-    
+    X_train = sc.fit_transform(X_train)  # scaled data has mean 0 and variance 1 (only over training set)
+    X_test = sc.transform(X_test)  # use same scaler as one fitted to training data
+
     ind_eval = LinCombClassificationfEvaluator()
+    plato_switch_checker = PlatoTerminationChecker(gens=10,threshold=0.001)
+
+    def plato_switch_checker_func(eval):
+        global got_to_plato
+        if got_to_plato:
+            return True
+        if plato_switch_checker.should_terminate(eval.gen_population,eval.best_in_gen, eval.gen):
+            got_to_plato = True
+        return got_to_plato
 
     evoml = SimpleEvolution(
         Subpopulation(creators=GAFloatVectorCreator(length=X.shape[1], bounds=(-1, 1)),
@@ -68,9 +77,9 @@ def main():
                       elitism_rate=0.0,
                       # genetic operators sequence to be applied in each generation
                       operators_sequence=[
-                        VectorKPointsCrossover(probability=0.7, k=2),
-                        FloatVectorGaussNPointMutation(probability=0.3, n=5),
-                        FloatVectorUniformNPointMutation(probability=0.1, n=5)
+                          VectorKPointsCrossover(probability=0.7, k=2),
+                          FloatVectorGaussNPointMutation(probability=0.3, n=5),
+                          FloatVectorUniformNPointMutation(probability=0.1, n=5)
                       ],
                       selection_methods=[
                           # (selection method, selection probability) tuple
@@ -78,15 +87,17 @@ def main():
                       ]),
         breeder=SimpleBreeder(),
         population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=50,
-                                                             gen_sample_step=1,
-                                                             accumulate_population_data=True,
-                                                             cache_fitness=False,
-                                                             model_type=model_type,
-                                                             model_params=model_params,
-                                                             should_approximate=lambda eval: eval.approx_fitness_error < thresholds[dsname]),
+                                                         gen_sample_step=1,
+                                                         accumulate_population_data=True,
+                                                         cache_fitness=False,
+                                                         model_type=model_type,
+                                                         model_params=model_params,
+                                                         should_approximate=(lambda
+                                                             eval: plato_switch_checker_func(eval) and eval.approx_fitness_error < 0.028)),
+        # < thresholds[dsname]),
         max_workers=1,
         max_generation=100,
-        statistics=ApproxStatistics(ind_eval) #PlotStatistics(),
+        statistics=ApproxStatistics(ind_eval)#PlotStatistics(),
         # termination_checker=ThresholdFromSaturationTerminationChecker(saturation_time=40, threshold=0.005)
     )
     # wrap the basic evolutionary algorithm with a sklearn-compatible classifier
@@ -95,7 +106,8 @@ def main():
     # train the classifier
     evoml_classifier.fit(X_train, y_train)
 
-    print(f'Approximations: {evoml_classifier.algorithm.population_evaluator.approx_count / evoml_classifier.algorithm.max_generation}')
+    print(
+        f'Approximations: {evoml_classifier.algorithm.population_evaluator.approx_count / evoml_classifier.algorithm.max_generation}')
 
     # calculate the accuracy of the classifier
     y_pred = evoml_classifier.predict(X_test)

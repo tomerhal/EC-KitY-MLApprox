@@ -31,12 +31,13 @@ class PlatoTerminationChecker(TerminationChecker):
             True if the algorithm should terminate early, False otherwise.
         """
 
-        # Don't terminate during the first gens generations
-        if self.gens > gen_number or len(self.fitness_history) < self.gens:
-            return False
-        
         # Check if the best fitness has changed
         curr_fitness = best_individual.get_pure_fitness()
+
+        # Don't terminate during the first gens generations
+        if self.gens > gen_number or len(self.fitness_history) < self.gens:
+            self.fitness_history.append(curr_fitness)
+            return False
 
         del self.fitness_history[0]
         self.fitness_history.append(curr_fitness)
