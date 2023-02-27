@@ -106,7 +106,12 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
                     sample_inds = random.sample(sub_population.individuals, sample_size)
                     fitnesses = self._evaluate_individuals(sample_inds, sub_population.evaluator)
 
-                    # update the model's performance
+                    # update population dataframe with sampled individuals
+                    if self.accumulate_population_data:
+                        vecs = [ind.get_vector() for ind in sample_inds]
+                        self._update_dataframe(vecs, fitnesses)
+
+                    # update model's performance
                     self._update_model_error(sample_inds, fitnesses)
                 
             else:
@@ -170,6 +175,20 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
 
         fitnesses = [future.result() for future in eval_futures]
         return fitnesses
+    
+    def _update_dataframe(self, ind_vectors: List[List], fitnesses: List[float]):
+        if self.df is None:
+                self.df = pd.DataFrame(np.array(ind_vectors))
+                self.df['fitness'] = np.array(fitnesses)
+        else:
+            df = pd.DataFrame(np.array(ind_vectors))
+            df['fitness'] = np.array(fitnesses)
+
+            self.df = pd.concat([self.df, df], ignore_index=True, copy=False)
+            n_features= self.df.shape[1] - 1
+
+            # if the same individual is evaluated multiple times, keep the last evaluation
+            self.df.drop_duplicates(subset=range(n_features), keep='last', inplace=True)
 
     def fit(self, individuals: List[Individual], fitnesses: List[float]) -> RegressorMixin:
         """
@@ -188,19 +207,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         ind_vectors = [ind.get_vector() for ind in individuals]
         
         if self.accumulate_population_data:
-            if self.df is None:
-                self.df = pd.DataFrame(np.array(ind_vectors))
-                self.df['fitness'] = np.array(fitnesses)
-            else:
-                df = pd.DataFrame(np.array(ind_vectors))
-                df['fitness'] = np.array(fitnesses)
-
-                self.df = pd.concat([self.df, df], ignore_index=True, copy=False)
-                n_features= self.df.shape[1] - 1
-
-                # if the same individual is evaluated multiple times, keep the last evaluation
-                self.df.drop_duplicates(subset=range(n_features), keep='last', inplace=True)
-
+            self._update_dataframe(ind_vectors, fitnesses)
             X, y = self.df.iloc[:, :-1].to_numpy(), self.df.iloc[:, -1].to_numpy()
         else:
             X, y = np.array(ind_vectors), np.array(fitnesses)
