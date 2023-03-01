@@ -26,7 +26,7 @@ from plot_statistics import PlotStatistics
 
 from pmlb import fetch_data
 
-from plato_termination_checker import ThresholdFromSaturationTerminationChecker
+from plateau_switch_condition import PlateauTerminationChecker
 
 
 def main():
@@ -67,8 +67,7 @@ def main():
         breeder=SimpleBreeder(),
         max_workers=1,
         max_generation=100,
-        statistics=PlotStatistics(),
-        termination_checker=ThresholdFromSaturationTerminationChecker(10, 0.005)
+        statistics=PlotStatistics()
     )
 
     # wrap the basic evolutionary algorithm with a sklearn-compatible classifier
@@ -86,7 +85,7 @@ def main():
     print('Total time:', evo_time)
 
     plot_stats = evo.statistics[0]
-    plot_stats.plot_statistics()
+    #plot_stats.plot_statistics("magic","evo","")
 
 if __name__ == "__main__":
     main()

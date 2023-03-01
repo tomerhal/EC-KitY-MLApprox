@@ -1,0 +1,19 @@
+ dsname: magic
+ n_samples: 19020
+ n_features: 10
+ n_replicates: 5
+model: SGDRegressor
+ model params: {'max_iter': 1000, 'tol': 0.001}
+
+rep 1, Evo, score: 0.765, eval_time: 35.890625, total time: 36.359375
+rep 1, EvoML, score: 0.73, eval_time: 24.515625, total time: 25.046875
+rep 2, Evo, score: 0.77, eval_time: 32.1875, total time: 32.578125
+rep 2, EvoML, score: 0.736, eval_time: 27.421875, total time: 27.984375
+rep 3, Evo, score: 0.764, eval_time: 36.578125, total time: 37.015625
+rep 3, EvoML, score: 0.733, eval_time: 23.9375, total time: 24.453125
+rep 4, Evo, score: 0.776, eval_time: 56.6875, total time: 57.359375
+rep 4, EvoML, score: 0.724, eval_time: 22.890625, total time: 23.296875
+rep 5, Evo, score: 0.761, eval_time: 52.5625, total time: 53.1875
+rep 5, EvoML, score: 0.718, eval_time: 18.03125, total time: 18.375
+*>> magic, #1: EvoML 0.7295!, #2: Evo 0.7649
+*runtime 336.90625

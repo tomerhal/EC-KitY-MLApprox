@@ -7,11 +7,11 @@ from eckity.fitness.simple_fitness import SimpleFitness
 
 import sys
 sys.path.append('..')
-from plato_termination_checker import PlatoTerminationChecker
+from plateau_switch_condition import PlateauTerminationChecker
 
-class TestPlato:
+class TestPlateau:
     def _should_terminate(self, gens, threshold, higher_is_better, fitness_history, curr_fitness):
-        term_checker = PlatoTerminationChecker(gens=gens, threshold=threshold, higher_is_better=higher_is_better)
+        term_checker = PlateauTerminationChecker(gens=gens, threshold=threshold, higher_is_better=higher_is_better)
         term_checker.fitness_history = fitness_history
         best_ind = Vector(SimpleFitness(curr_fitness), bounds=(-1, 1))
         return term_checker.should_terminate(None, best_ind, gens)
