@@ -57,7 +57,7 @@ def main():
     X_test = sc.transform(X_test)  # use same scaler as one fitted to training data
 
     ind_eval = LinCombClassificationfEvaluator()
-    plateau = PlateauSwitchCondition(gens=5,threshold=0.01)
+    plateau = PlateauSwitchCondition(gens=5,threshold=0.01, switch_once=True)
 
     evoml = SimpleEvolution(
         Subpopulation(creators=GAFloatVectorCreator(length=X.shape[1], bounds=(-1, 1)),
