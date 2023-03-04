@@ -61,7 +61,9 @@ def create_evoml_clf(n_features, model_type, model_params, dsname) -> SKClassifi
                                                              cache_fitness=False,
                                                              model_type=model_type,
                                                              model_params=model_params,
-                                                             should_approximate=(plateau.should_approximate)
+                                                             should_approximate=(plateau.should_approximate),
+                                                             switch_once=True,
+                                                             gen_weight=linear_gen_weight
                                                             ),
             max_workers=1,
             max_generation=100,

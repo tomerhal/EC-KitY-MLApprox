@@ -44,6 +44,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
                 model_type=SGDRegressor,
                 model_params=None,
                 accumulate_population_data=False,
+                gen_weight=lambda gen: gen + 1,
                 cache_fitness=False,
                 ensemble=False):
         super().__init__()
@@ -82,6 +83,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
             self.models = dict()
 
         self.model_error_history = dict()
+        self.gen_weight = gen_weight
 
     @overrides
     def _evaluate(self, population: Population) -> Individual:
@@ -101,13 +103,12 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         eval_start_time = process_time()
         super()._evaluate(population)
         self.gen_population = population
-        if self.gen > 1:
+        if self.gen > 0:
             should_approximate = self.should_approximate(self)
         else:
             should_approximate = False
         for sub_population in population.sub_populations:
             if should_approximate:
-
                 self.approx_count += 1
                 # Approximate fitness scores of the whole population
                 preds = self.predict(sub_population.individuals)
@@ -149,7 +150,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
                 best_fitness = ind.fitness
 
         self.best_in_gen = best_ind
-        
+
         eval_end_time = process_time()
         self.evaluation_time += eval_end_time - eval_start_time
         return best_ind
@@ -159,7 +160,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         err = self.eval(individuals, fitnesses)
         self.model_error_history[self.gen] = err
         gens, errors = self.model_error_history.keys(), self.model_error_history.values()
-        self.approx_fitness_error = np.average(list(errors), weights=[gen + 1 for gen in gens])
+        self.approx_fitness_error = np.average(list(errors), weights=[self.gen_weight(gen) for gen in gens])
     
     def _evaluate_individuals(self, individuals: List[Individual], evaluator: IndividualEvaluator) -> List[float]:
         """
@@ -266,7 +267,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         ind_vectors = [ind.get_vector() for ind in individuals]
 
         if self.ensemble:
-            weights = [gen + 1 for gen in self.models]
+            weights = [self.gen_weight(gen) for gen in self.models]
             return np.average([model.predict(ind_vectors) for model in self.models.values()], weights=weights)
 
         return self.model.predict(ind_vectors)
