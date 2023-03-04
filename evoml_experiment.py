@@ -85,7 +85,6 @@ def main():
                                                          model_type=model_type,
                                                          model_params=model_params,
                                                          should_approximate=(lambda eval: plateau.should_approximate(eval) and eval.approx_fitness_error < thresholds[dsname]),
-                                                         switch_once=True,
                                                          gen_weight=linear_gen_weight),
         max_workers=1,
         max_generation=100,
