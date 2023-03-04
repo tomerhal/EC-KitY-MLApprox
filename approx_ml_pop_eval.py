@@ -228,7 +228,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
 
         # Add new model to the ensemble (if ensemble is enabled)
         if self.ensemble:
-            self.models.update(self.gen, self.model)
+            self.models[self.gen] = self.model
 
         ind_vectors = [ind.get_vector() for ind in individuals]
         
@@ -268,7 +268,8 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
 
         if self.ensemble:
             weights = [self.gen_weight(gen) for gen in self.models]
-            return np.average([model.predict(ind_vectors) for model in self.models.values()], weights=weights)
+            preds = [model.predict(ind_vectors) for model in self.models.values()]
+            return np.average(preds, weights=weights, axis=0)
 
         return self.model.predict(ind_vectors)
 
