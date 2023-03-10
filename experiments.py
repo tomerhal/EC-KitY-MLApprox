@@ -35,7 +35,7 @@ def scoring(y_true, y_pred):
     return balanced_accuracy_score(y_true, y_pred)
 
 def create_evoml_clf(n_features, model_type, model_params, dsname) -> SKClassifier:
-    plateau = PlateauSwitchCondition(gens=5, threshold=0.01)
+    plateau = PlateauSwitchCondition(gens=5, threshold=0.01, switch_once=True)
     evoml = SimpleEvolution(
             Subpopulation(creators=GAFloatVectorCreator(length=n_features, bounds=(-1, 1)),
                         population_size=100,
@@ -56,13 +56,13 @@ def create_evoml_clf(n_features, model_type, model_params, dsname) -> SKClassifi
                         ]),
             breeder=SimpleBreeder(),
             population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=100,
-                                                             gen_sample_step=5,
+                                                             gen_sample_step=2,
                                                              accumulate_population_data=True,
-                                                             cache_fitness=False,
                                                              model_type=model_type,
                                                              model_params=model_params,
-                                                             should_approximate=(plateau.should_approximate),
-                                                             gen_weight=linear_gen_weight
+                                                             should_approximate=lambda eval: plateau.should_approximate(eval) and eval.approx_fitness_error < thresholds[dsname],
+                                                             gen_weight=square_gen_weight,
+                                                             ensemble=True
                                                             ),
             max_workers=1,
             max_generation=100,
@@ -143,7 +143,7 @@ def main():
     fname, dsname, n_replicates = get_args()
 
     model_type = Ridge
-    model_params = {'alpha': 200}
+    model_params = {'alpha': 400}
 
     # load the dataset
     X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='datasets')

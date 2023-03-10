@@ -45,12 +45,12 @@ def main():
 
     dsname = sys.argv[1]
     model_type = Ridge
-    model_params = {'alpha': 100}
+    model_params = {'alpha': 300}
 
     # load the dataset
     X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='datasets')
     # split the dataset to train and test set
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
 
     sc = StandardScaler()
     X_train = sc.fit_transform(X_train)  # scaled data has mean 0 and variance 1 (only over training set)
@@ -79,14 +79,14 @@ def main():
                       ]),
         breeder=SimpleBreeder(),
         population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=100,
-                                                         gen_sample_step=5,
+                                                         gen_sample_step=2,
                                                          accumulate_population_data=True,
                                                          cache_fitness=False,
                                                          model_type=model_type,
                                                          model_params=model_params,
-                                                         should_approximate=(lambda eval: eval.approx_fitness_error < thresholds[dsname]),
+                                                         ensemble=True,
                                                          gen_weight=linear_gen_weight,
-                                                         ensemble=True),
+                                                         should_approximate=lambda eval: plateau.should_approximate(eval)), #and eval.approx_fitness_error < thresholds[dsname]),
         max_workers=1,
         max_generation=100,
         statistics=ApproxStatistics(ind_eval)#PlotStatistics(),
