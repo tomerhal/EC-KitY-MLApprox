@@ -30,7 +30,6 @@ from pmlb import fetch_data
 from approx_ml_pop_eval import ApproxMLPopulationEvaluator
 from plateau_switch_condition import PlateauSwitchCondition
 
-got_to_plateau = False
 def main():
     """
     Basic setup.
@@ -45,7 +44,7 @@ def main():
 
     dsname = sys.argv[1]
     model_type = Ridge
-    model_params = {'alpha': 300}
+    model_params = {'alpha': 100}
 
     # load the dataset
     X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='datasets')
@@ -57,14 +56,14 @@ def main():
     X_test = sc.transform(X_test)  # use same scaler as one fitted to training data
 
     ind_eval = LinCombClassificationfEvaluator()
-    plateau = PlateauSwitchCondition(gens=5,threshold=0.01, switch_once=True)
+    plateau = PlateauSwitchCondition(gens=5,threshold=0.001, switch_once=False)
 
     evoml = SimpleEvolution(
         Subpopulation(creators=GAFloatVectorCreator(length=X.shape[1], bounds=(-1, 1)),
                       population_size=100,
                       # user-defined fitness evaluation method
                       evaluator=ind_eval,
-                      # maximization problem (fitness is sum of values), so higher fitness is better
+                      # maximization problem, so higher fitness is better
                       higher_is_better=True,
                       elitism_rate=0.0,
                       # genetic operators sequence to be applied in each generation
@@ -86,7 +85,7 @@ def main():
                                                          model_params=model_params,
                                                          ensemble=True,
                                                          gen_weight=linear_gen_weight,
-                                                         should_approximate=lambda eval: plateau.should_approximate(eval)), #and eval.approx_fitness_error < thresholds[dsname]),
+                                                         should_approximate=lambda eval: plateau.should_approximate(eval) and eval.approx_fitness_error < thresholds[dsname]),
         max_workers=1,
         max_generation=100,
         statistics=ApproxStatistics(ind_eval)#PlotStatistics(),

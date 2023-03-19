@@ -1,9 +1,6 @@
-"""
-My Teza.
-"""
-
 import numpy as np
 from time import process_time
+import sys
 
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.model_selection import train_test_split
@@ -26,8 +23,6 @@ from plot_statistics import PlotStatistics
 
 from pmlb import fetch_data
 
-from plateau_switch_condition import PlateauTerminationChecker
-
 
 def main():
     """
@@ -36,8 +31,15 @@ def main():
 
     evo_start_time = process_time()
 
+    # parse system arguments
+    if len(sys.argv) < 2:
+        print("Usage: python evo_experiment.py <dataset_name>")
+        exit(1)
+
+    dsname = sys.argv[1]
+
     # load the magic dataset
-    X, y = fetch_data('magic',return_X_y=True, local_cache_dir='./')
+    X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='./')
     # split the dataset to train and test set
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
@@ -48,7 +50,7 @@ def main():
     # Initialize both algorithms
     evo = SimpleEvolution(
         Subpopulation(creators=GAFloatVectorCreator(length=X.shape[1], bounds=(-1, 1)),
-                      population_size=10,
+                      population_size=100,
                       # user-defined fitness evaluation method
                       evaluator=LinCombClassificationfEvaluator(),
                       # maximization problem (fitness is sum of values), so higher fitness is better
@@ -85,7 +87,7 @@ def main():
     print('Total time:', evo_time)
 
     plot_stats = evo.statistics[0]
-    #plot_stats.plot_statistics("magic","evo","")
+    plot_stats.plot_statistics(dsname, "evo", "")
 
 if __name__ == "__main__":
     main()

@@ -43,7 +43,7 @@ class PlotStatistics(Statistics):
             len(self.max_fitnesses) == len(self.min_fitnesses), \
                 'Statistics lists are not the same length'
         
-        plt.title(f'{dsname} {model_type.__name__} {model_params}')
+        plt.title(f'{dsname} {model_type} {model_params}')
         plt.plot(self.mean_fitnesses, label='mean')
         plt.plot(self.median_fitnesses, label='median')
         plt.plot(self.max_fitnesses, label='max')

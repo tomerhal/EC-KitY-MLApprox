@@ -118,16 +118,18 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
                 if self.gen > 0 and self.gen % self.gen_sample_step == 0:
                     # Sample a subset of the population and compute their fitness
                     sample_size = self.population_sample_size if isinstance(self.population_sample_size, int) else int(len(sub_population.individuals) * self.population_sample_size)
-                    sample_inds = random.sample(sub_population.individuals, sample_size)
-                    fitnesses = self._evaluate_individuals(sample_inds, sub_population.evaluator)
 
-                    # update population dataframe with sampled individuals
-                    if self.accumulate_population_data:
-                        vecs = [ind.get_vector() for ind in sample_inds]
-                        self._update_dataframe(vecs, fitnesses)
+                    if sample_size > 0:
+                        sample_inds = random.sample(sub_population.individuals, sample_size)
+                        fitnesses = self._evaluate_individuals(sample_inds, sub_population.evaluator)
 
-                    # update model's performance
-                    self._update_model_error(sample_inds, fitnesses)
+                        # update population dataframe with sampled individuals
+                        if self.accumulate_population_data:
+                            vecs = [ind.get_vector() for ind in sample_inds]
+                            self._update_dataframe(vecs, fitnesses)
+
+                        # update model's performance
+                        self._update_model_error(sample_inds, fitnesses)
                 
             else:
                 # Compute fitness scores of the whole population
@@ -269,9 +271,13 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         if self.ensemble:
             weights = [self.gen_weight(gen) for gen in self.models]
             preds = [model.predict(ind_vectors) for model in self.models.values()]
-            return np.average(preds, weights=weights, axis=0)
+            preds = np.average(preds, weights=weights, axis=0)
 
-        return self.model.predict(ind_vectors)
+        else:
+            preds = self.model.predict(ind_vectors)
+        
+        # enforce the model's prediction to be between 0 and 1
+        return [1.0 if pred > 1 else 0.0 if pred < 0 else pred for pred in preds]
 
     def eval(self, individuals: List[Individual], fitnesses: List[float]) -> float:
         """

@@ -1,12 +1,16 @@
 import numpy as np
 
-DATASETS = ['adult', 'magic', 'coil2000', 'agaricus_lepiota', 'mushroom', 'ring']
+BIG_DATASETS = ['adult', 'magic', 'coil2000', 'agaricus_lepiota', 'mushroom', 'ring']
+
+# 10 datasets of 200-350 samples each
+SMALL_DATASETS = ['prnn_crabs', 'sonar', 'biomed', 'heart_statlog', 'spect', 'breast_cancer', 'heart_h', 'cleve', 'bupa']
+
 thresholds = {
     'adult': 0.1,
     'magic': 0.07,
     'coil2000': 0.03,
     'agaricus_lepiota': 0.04,
-    'mushroom': 0.05,
+    'mushroom': 0.06,
     'ring': 0.02
 }
 
