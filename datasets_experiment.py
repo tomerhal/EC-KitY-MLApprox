@@ -40,23 +40,22 @@ def main():
         exit(1)
 
     n_iter = int(sys.argv[1])
-    thresholds = np.arange(0.2, 0.8, 0.1)
+    thresholds = range(20, 81, 10)
 
     model_type = Ridge
-    model_params = {'alpha': 100}
+    model_params = {'alpha': 500}
 
     # for recording scores and params across all replicates
 
     alliters = dict.fromkeys(thresholds)
     for k in alliters:
-        alliters[k] = {'test_scores': [], 'full_times': [], 'approximations': []}
+        alliters[k] = {'test_scores': [], 'full_times': []}
 
     for i in range(n_iter):
         for threshold in thresholds:
 
             test_scores = []
             full_times = []
-            approximations = []
 
             for dsname in SMALL_DATASETS:
                 start_time = process_time()
@@ -97,7 +96,7 @@ def main():
                                                                     model_params=model_params,
                                                                     ensemble=True,
                                                                     gen_weight=square_gen_weight,
-                                                                    should_approximate=lambda eval: eval.gen >= threshold),
+                                                                    should_approximate=lambda eval: eval.gen > threshold),
                     max_workers=1,
                     max_generation=100
                 )
@@ -107,12 +106,10 @@ def main():
                 # train the classifier
                 evoml_classifier.fit(X_train, y_train)
 
-                approx = evoml_classifier.algorithm.population_evaluator.approx_count / evoml_classifier.algorithm.max_generation
-                approximations.append(approx)
-
                 # calculate the accuracy of the classifier
                 y_pred = evoml_classifier.predict(X_test)
                 accuracy = balanced_accuracy_score(y_test, y_pred)
+                print('accuracy:', accuracy)
                 test_scores.append(accuracy)
 
                 dataset_time = process_time() - start_time
@@ -120,21 +117,18 @@ def main():
 
             alliters[threshold]['test_scores'].append(np.mean(test_scores))
             alliters[threshold]['full_times'].append(np.mean(full_times))
-            alliters[threshold]['approximations'].append(np.mean(approximations))
 
     evoml_time = process_time() - evoml_start_time
     print('Total time:', evoml_time)
 
     mean_test_scores = [np.mean(alliters[threshold]['test_scores']) for threshold in thresholds]
     mean_full_times = [np.mean(alliters[threshold]['full_times']) for threshold in thresholds]
-    mean_approximations = [np.mean(alliters[threshold]['approximations']) for threshold in thresholds]
 
     plt.title(f'All Datasets {model_type.__name__} {model_params}')
     plt.plot(mean_test_scores, label='mean test score')
     # plt.plot(mean_full_times, label='mean time')
-    plt.plot(mean_approximations, label='mean approximations')
-    plt.xlabel('generation')
-    # plt.xticks(range(...), 5)
+    plt.xlabel('approximation percentage')
+    # plt.xticks(np.arange(0.2, 0.8, 0.1))
     plt.legend()
     plt.show()
 

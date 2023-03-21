@@ -44,7 +44,7 @@ def main():
 
     dsname = sys.argv[1]
     model_type = Ridge
-    model_params = {'alpha': 100}
+    model_params = {'alpha': 2}
 
     # load the dataset
     X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='datasets')
@@ -56,7 +56,15 @@ def main():
     X_test = sc.transform(X_test)  # use same scaler as one fitted to training data
 
     ind_eval = LinCombClassificationfEvaluator()
-    plateau = PlateauSwitchCondition(gens=5,threshold=0.001, switch_once=False)
+
+    evo_plateau = PlateauSwitchCondition(gens=10,threshold=0.005, switch_once=False)
+    evoml_plateau = PlateauSwitchCondition(gens=5,threshold=0.05, switch_once=False)
+
+    def should_approximate(eval):
+        if eval.is_approx:
+            return evoml_plateau.should_approximate(eval) and eval.approx_fitness_error < thresholds[dsname]
+        else:
+            return evo_plateau.should_approximate(eval) and eval.approx_fitness_error < thresholds[dsname]
 
     evoml = SimpleEvolution(
         Subpopulation(creators=GAFloatVectorCreator(length=X.shape[1], bounds=(-1, 1)),
@@ -77,15 +85,15 @@ def main():
                           (TournamentSelection(tournament_size=4, higher_is_better=True), 1)
                       ]),
         breeder=SimpleBreeder(),
-        population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=100,
-                                                         gen_sample_step=2,
+        population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=20,
+                                                         gen_sample_step=1,
                                                          accumulate_population_data=True,
                                                          cache_fitness=False,
                                                          model_type=model_type,
                                                          model_params=model_params,
-                                                         ensemble=True,
-                                                         gen_weight=linear_gen_weight,
-                                                         should_approximate=lambda eval: plateau.should_approximate(eval) and eval.approx_fitness_error < thresholds[dsname]),
+                                                         ensemble=False,
+                                                         gen_weight=square_gen_weight,
+                                                         should_approximate=should_approximate),
         max_workers=1,
         max_generation=100,
         statistics=ApproxStatistics(ind_eval)#PlotStatistics(),
@@ -96,8 +104,7 @@ def main():
     # train the classifier
     evoml_classifier.fit(X_train, y_train)
 
-    print(
-        f'Approximations: {evoml_classifier.algorithm.population_evaluator.approx_count / evoml_classifier.algorithm.max_generation}')
+    print(f'Approximations: {evoml_classifier.algorithm.population_evaluator.approx_count / evoml_classifier.algorithm.max_generation}')
 
     # calculate the accuracy of the classifier
     y_pred = evoml_classifier.predict(X_test)
@@ -109,7 +116,6 @@ def main():
 
     plot_stats = evoml.statistics[0]
     plot_stats.plot_statistics(dsname, model_type, model_params)
-
 
 if __name__ == "__main__":
     main()

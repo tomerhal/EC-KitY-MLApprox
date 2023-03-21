@@ -35,7 +35,15 @@ def scoring(y_true, y_pred):
     return balanced_accuracy_score(y_true, y_pred)
 
 def create_evoml_clf(n_features, model_type, model_params, dsname) -> SKClassifier:
-    plateau = PlateauSwitchCondition(gens=5, threshold=0.01, switch_once=True)
+    evo_plateau = PlateauSwitchCondition(gens=15,threshold=0.005, switch_once=False)
+    evoml_plateau = PlateauSwitchCondition(gens=5,threshold=0.05, switch_once=False)
+
+    def should_approximate(eval):
+        if eval.is_approx:
+            return evoml_plateau.should_approximate(eval) and eval.approx_fitness_error < thresholds[dsname]
+        else:
+            return evo_plateau.should_approximate(eval) and eval.approx_fitness_error < thresholds[dsname]
+
     evoml = SimpleEvolution(
             Subpopulation(creators=GAFloatVectorCreator(length=n_features, bounds=(-1, 1)),
                         population_size=100,
@@ -55,14 +63,14 @@ def create_evoml_clf(n_features, model_type, model_params, dsname) -> SKClassifi
                             (TournamentSelection(tournament_size=4, higher_is_better=True), 1)
                         ]),
             breeder=SimpleBreeder(),
-            population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=100,
-                                                             gen_sample_step=2,
+            population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=20,
+                                                             gen_sample_step=1,
                                                              accumulate_population_data=True,
                                                              model_type=model_type,
                                                              model_params=model_params,
-                                                             should_approximate=lambda eval: plateau.should_approximate(eval) and eval.approx_fitness_error < thresholds[dsname],
+                                                             should_approximate=should_approximate,
                                                              gen_weight=square_gen_weight,
-                                                             ensemble=True
+                                                             ensemble=False
                                                             ),
             max_workers=1,
             max_generation=100,
@@ -143,7 +151,7 @@ def main():
     fname, dsname, n_replicates = get_args()
 
     model_type = Ridge
-    model_params = {'alpha': 400}
+    model_params = {'alpha': 2}
 
     # load the dataset
     X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='datasets')

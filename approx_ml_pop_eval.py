@@ -15,6 +15,7 @@ from eckity.evaluators.population_evaluator import PopulationEvaluator
 from eckity.fitness.fitness import Fitness
 from eckity.individual import Individual
 from eckity.population import Population
+from eckity.genetic_encodings.ga.vector_individual import Vector
 
 from typing import List
 
@@ -75,6 +76,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         if should_approximate is None:
             should_approximate = lambda eval: eval.approx_fitness_error < 0.1
         self.should_approximate = should_approximate
+        self.is_approx = False
 
         if accumulate_population_data:
             self.df = None
@@ -104,11 +106,12 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         super()._evaluate(population)
         self.gen_population = population
         if self.gen > 0:
-            should_approximate = self.should_approximate(self)
+            self.is_approx = self.should_approximate(self)
         else:
-            should_approximate = False
+            self.is_approx = False
+
         for sub_population in population.sub_populations:
-            if should_approximate:
+            if self.is_approx:
                 self.approx_count += 1
                 # Approximate fitness scores of the whole population
                 preds = self.predict(sub_population.individuals)
@@ -128,8 +131,8 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
                             vecs = [ind.get_vector() for ind in sample_inds]
                             self._update_dataframe(vecs, fitnesses)
 
-                        # update model's performance
-                        self._update_model_error(sample_inds, fitnesses)
+                        # train the model with the sampled individuals
+                        self.fit(sample_inds, fitnesses)
                 
             else:
                 # Compute fitness scores of the whole population
@@ -138,23 +141,41 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
                     ind.fitness.set_fitness(fitnesses[i])
                 self.fit(sub_population.individuals, fitnesses)
 
-        self.gen += 1
-
         # only one subpopulation in simple case
         individuals = population.sub_populations[0].individuals
 
-        best_ind: Individual = population.sub_populations[0].individuals[0]
+        best_ind = individuals[0]
+
+        if self.accumulate_population_data:
+            gen_df = self.df[self.df['gen'] == self.gen]
+            if gen_df.empty:
+                return None
+            else:
+                best_fitness_idx = gen_df['fitness'].idxmax()
+                best_fitness = gen_df.loc[best_fitness_idx]['fitness']
+                best_vector = gen_df.loc[best_fitness_idx][:-2].to_list()
+                best_ind = best_ind.clone()
+                best_ind.set_vector(best_vector)
+                best_ind.fitness.set_fitness(best_fitness)
+        else:
+            best_ind = self._get_best_individual(individuals)
+
+        self.best_in_gen = self._get_best_individual(individuals)
+
+        self.gen += 1
+
+        eval_end_time = process_time()
+        self.evaluation_time += eval_end_time - eval_start_time
+        return best_ind
+    
+    def _get_best_individual(self, individuals: List[Individual]) -> Individual:
+        best_ind: Individual = individuals[0]
         best_fitness: Fitness = best_ind.fitness
 
         for ind in individuals[1:]:
             if ind.fitness.better_than(ind, best_fitness, best_ind):
                 best_ind = ind
                 best_fitness = ind.fitness
-
-        self.best_in_gen = best_ind
-
-        eval_end_time = process_time()
-        self.evaluation_time += eval_end_time - eval_start_time
         return best_ind
     
     def _update_model_error(self, individuals: List[Individual], fitnesses):
@@ -213,7 +234,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
             # if the same individual is evaluated multiple times, keep the last evaluation
             self.df.drop_duplicates(subset=range(n_features), keep='last', inplace=True)
 
-    def fit(self, individuals: List[Individual], fitnesses: List[float]) -> RegressorMixin:
+    def fit(self, individuals: List[Individual], fitnesses: List[float]) -> None:
         """
         Fit the Machine Learning model incrementally.
 
@@ -233,10 +254,14 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
             self.models[self.gen] = self.model
 
         ind_vectors = [ind.get_vector() for ind in individuals]
-        
+
+        # Vector of generation number of each individual in the dataframe (used for sample weights)
+        w = None
+
         if self.accumulate_population_data:
             self._update_dataframe(ind_vectors, fitnesses)
             X, y = self.df.iloc[:, :-2].to_numpy(), self.df['fitness'].to_numpy()
+            w = self.gen_weight(self.df['gen'].to_numpy())
         else:
             X, y = np.array(ind_vectors), np.array(fitnesses)
 
@@ -246,11 +271,13 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         scores = []
         kf = KFold(n_splits=5, shuffle=True)
         for train_index, test_index in kf.split(X):
-            self.model.fit(X[train_index], y[train_index])      
+            sample_weight = w[train_index] if self.accumulate_population_data else None
+            self.model.fit(X[train_index], y[train_index], sample_weight)
             scores.append(self.scoring(y[test_index], self.model.predict(X[test_index])))
         self.approx_fitness_error = np.mean(scores)
 
-        self.model.fit(X, y)
+        # Now fit the model on the whole training set
+        self.model.fit(X, y, sample_weight=w)
 
     def predict(self, individuals: List[Individual]):
         """
