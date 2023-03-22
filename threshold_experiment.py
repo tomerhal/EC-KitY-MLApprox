@@ -52,12 +52,13 @@ def main():
         alliters[k] = {'test_scores': [], 'full_times': []}
 
     for i in range(n_iter):
+        print('iter', i)
         for threshold in thresholds:
 
             test_scores = []
             full_times = []
-
-            for dsname in SMALL_DATASETS:
+            
+            for dsname in BIG_DATASETS:
                 start_time = process_time()
 
                 # load the dataset
@@ -89,8 +90,8 @@ def main():
                                     (TournamentSelection(tournament_size=4, higher_is_better=True), 1)
                                 ]),
                     breeder=SimpleBreeder(),
-                    population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=0,
-                                                                    gen_sample_step=100,
+                    population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=20,
+                                                                    gen_sample_step=1,
                                                                     accumulate_population_data=True,
                                                                     model_type=model_type,
                                                                     model_params=model_params,
@@ -109,7 +110,6 @@ def main():
                 # calculate the accuracy of the classifier
                 y_pred = evoml_classifier.predict(X_test)
                 accuracy = balanced_accuracy_score(y_test, y_pred)
-                print('accuracy:', accuracy)
                 test_scores.append(accuracy)
 
                 dataset_time = process_time() - start_time

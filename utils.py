@@ -2,6 +2,9 @@ import numpy as np
 
 BIG_DATASETS = ['adult', 'magic', 'coil2000', 'agaricus_lepiota', 'mushroom', 'ring']
 
+# 10 datasets of ~1000 samples each
+MEDIUM_DATASETS = ['titanic', 'parity5+5', 'flare', 'credit_g', 'german', 'xd6', 'tokyo1', 'tic_tac_toe', 'pima', 'breast']
+
 # 10 datasets of 200-350 samples each
 SMALL_DATASETS = ['prnn_crabs', 'sonar', 'biomed', 'heart_statlog', 'spect', 'breast_cancer', 'heart_h', 'cleve', 'bupa']
 

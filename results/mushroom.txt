@@ -6,22 +6,3 @@
  model params: {'alpha': 2}
  approx threshold: 0.06
 
-rep 1, Evo, score: 0.96, eval_time: 41.78125, total time: 46.4375
-rep 1, EvoML, score: 0.933, eval_time: 25.078125, total time: 29.875
-rep 2, Evo, score: 0.951, eval_time: 42.40625, total time: 47.203125
-rep 2, EvoML, score: 0.952, eval_time: 46.09375, total time: 50.984375
-rep 3, Evo, score: 0.941, eval_time: 44.65625, total time: 49.9375
-rep 3, EvoML, score: 0.934, eval_time: 34.078125, total time: 38.78125
-rep 4, Evo, score: 0.954, eval_time: 43.9375, total time: 48.4375
-rep 4, EvoML, score: 0.947, eval_time: 25.25, total time: 28.734375
-rep 5, Evo, score: 0.947, eval_time: 26.390625, total time: 28.8125
-rep 5, EvoML, score: 0.954, eval_time: 29.40625, total time: 32.328125
-rep 6, Evo, score: 0.939, eval_time: 29.140625, total time: 31.953125
-rep 6, EvoML, score: 0.919, eval_time: 19.484375, total time: 22.34375
-rep 7, Evo, score: 0.956, eval_time: 38.921875, total time: 43.609375
-rep 7, EvoML, score: 0.927, eval_time: 30.46875, total time: 35.21875
-rep 8, Evo, score: 0.961, eval_time: 42.609375, total time: 47.484375
-rep 8, EvoML, score: 0.96, eval_time: 46.453125, total time: 51.171875
-rep 9, Evo, score: 0.941, eval_time: 43.71875, total time: 48.140625
-rep 9, EvoML, score: 0.93, eval_time: 24.359375, total time: 29.140625
-rep 10, Evo, score: 0.953, eval_time: 37.140625, total time: 41.609375
