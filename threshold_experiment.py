@@ -43,7 +43,7 @@ def main():
     thresholds = range(20, 81, 10)
 
     model_type = Ridge
-    model_params = {'alpha': 500}
+    model_params = {'alpha': 2}
 
     # for recording scores and params across all replicates
 
@@ -52,7 +52,7 @@ def main():
         alliters[k] = {'test_scores': [], 'full_times': []}
 
     for i in range(n_iter):
-        print('iter', i)
+        print(f'\n\nITER {i}\n')
         for threshold in thresholds:
 
             test_scores = []
