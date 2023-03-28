@@ -20,3 +20,6 @@ thresholds = {
 linear_gen_weight = lambda gen: gen + 1
 square_gen_weight = lambda gen: (gen + 1) ** 2
 exp_gen_weight = lambda gen: np.e ** (gen + 1)
+
+CIFAR10_TRAIN_SAMPLES = 500
+CIFAR10_TEST_SAMPLES = 100

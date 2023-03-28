@@ -104,6 +104,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         """
         eval_start_time = process_time()
         super()._evaluate(population)
+
         self.gen_population = population
         if self.gen > 0:
             self.is_approx = self.should_approximate(self)
@@ -166,6 +167,12 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
 
         eval_end_time = process_time()
         self.evaluation_time += eval_end_time - eval_start_time
+
+        print(f'gen {self.gen} population:\n')
+        for ind in sub_population.individuals:
+            print(ind.get_vector(), ind.fitness.get_pure_fitness())
+
+        print(f'gen {self.gen} best ind:', best_ind.get_vector())
         return best_ind
     
     def _get_best_individual(self, individuals: List[Individual]) -> Individual:
@@ -233,6 +240,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
 
             # if the same individual is evaluated multiple times, keep the last evaluation
             self.df.drop_duplicates(subset=range(n_features), keep='last', inplace=True)
+        print(f'gen {self.gen} df:\n', self.df)
 
     def fit(self, individuals: List[Individual], fitnesses: List[float]) -> None:
         """

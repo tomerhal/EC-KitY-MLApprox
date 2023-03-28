@@ -2,6 +2,8 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 
+import ssl
+
 import numpy as np
 from time import process_time
 
@@ -41,19 +43,24 @@ def main():
     [transforms.ToTensor(),
      transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-    batch_size = 4
+    batch_size = 5
+    
+    ssl._create_default_https_context = ssl._create_unverified_context
 
-    trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
+    train_samples = np.random.choice(50000, size=CIFAR10_TRAIN_SAMPLES, replace=False)
+    test_samples = np.random.choice(10000, size=CIFAR10_TEST_SAMPLES, replace=False)
+
+    trainset = torchvision.datasets.CIFAR10(root='./datasets', train=True,
                                             download=True, transform=transform)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
-                                            shuffle=True, num_workers=2)
+    trainset = torch.utils.data.Subset(trainset, train_samples)
 
-    testset = torchvision.datasets.CIFAR10(root='./data', train=False,
+    testset = torchvision.datasets.CIFAR10(root='./datasets', train=False,
                                         download=True, transform=transform)
+    testset = torch.utils.data.Subset(testset, test_samples)
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
-                                            shuffle=False, num_workers=2)
+                                            shuffle=False, num_workers=1)
 
-    ind_eval = NeuralNetworkEvaluator(trainset, trainloader)
+    ind_eval = NeuralNetworkEvaluator(trainset, batch_size, 1)
 
     evo_plateau = PlateauSwitchCondition(gens=10,threshold=0.005, switch_once=False)
     evoml_plateau = PlateauSwitchCondition(gens=5,threshold=0.05, switch_once=False)
@@ -65,17 +72,17 @@ def main():
             return evo_plateau.should_approximate(eval) and eval.approx_fitness_error < thresholds[dsname]
 
     evoml = SimpleEvolution(
-        Subpopulation(creators=GAIntVectorCreator(length=7,
+        Subpopulation(creators=GAIntVectorCreator(length=7, 
                                                   bounds=[
-                                                        (3, 9),    # conv1_out
-                                                        (3, 7),     # conv1_kernel_size
-                                                        (2, 4),     # pooling_kernel_size
+                                                        (6, 9),    # conv1_out
+                                                        (3, 5),     # conv1_kernel_size
+                                                        (2, 3),     # pooling_kernel_size
                                                         (13, 19),    # conv2_out
-                                                        (3, 7),     # conv2_kernel_size
+                                                        (3, 5),     # conv2_kernel_size
                                                         (100, 140),   # fc2_in
                                                         (60, 100)    # fc3_in
                                                         ]),
-                      population_size=100,
+                      population_size=6,
                       # user-defined fitness evaluation method
                       evaluator=ind_eval,
                       # maximization problem, so higher fitness is better
@@ -91,7 +98,7 @@ def main():
                           (TournamentSelection(tournament_size=4, higher_is_better=True), 1)
                       ]),
         breeder=SimpleBreeder(),
-        population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=20,
+        population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=0.2,
                                                          gen_sample_step=1,
                                                          accumulate_population_data=True,
                                                          cache_fitness=False,
@@ -101,9 +108,11 @@ def main():
                                                          gen_weight=square_gen_weight,
                                                          should_approximate=should_approximate),
         max_workers=1,
-        max_generation=100,
+        max_generation=2,
         statistics=ApproxStatistics(ind_eval)#PlotStatistics(),
     )
+
+    evoml.evolve()
 
     print(f'Approximations: {evoml.population_evaluator.approx_count / evoml.max_generation}')
 
