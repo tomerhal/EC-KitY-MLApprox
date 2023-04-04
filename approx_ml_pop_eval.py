@@ -10,7 +10,7 @@ from sklearn.model_selection import KFold, cross_val_score
 from sklearn.linear_model import SGDRegressor
 from overrides import overrides
 
-from eckity.evaluators.individual_evaluator import IndividualEvaluator
+from eckity.evaluators.simple_individual_evaluator import SimpleIndividualEvaluator
 from eckity.evaluators.population_evaluator import PopulationEvaluator
 from eckity.fitness.fitness import Fitness
 from eckity.individual import Individual
@@ -47,7 +47,8 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
                 accumulate_population_data=False,
                 gen_weight=lambda gen: gen + 1,
                 cache_fitness=False,
-                ensemble=False):
+                ensemble=False,
+                n_folds=5):
         super().__init__()
         self.approx_fitness_error = float('inf')
         self.population_sample_size = population_sample_size
@@ -86,6 +87,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
 
         self.model_error_history = dict()
         self.gen_weight = gen_weight
+        self.n_folds = n_folds
 
     @overrides
     def _evaluate(self, population: Population) -> Individual:
@@ -138,8 +140,8 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
             else:
                 # Compute fitness scores of the whole population
                 fitnesses = self._evaluate_individuals(sub_population.individuals, sub_population.evaluator)
-                for i, ind in enumerate(sub_population.individuals):
-                    ind.fitness.set_fitness(fitnesses[i])
+                for ind, fitness_score in zip(sub_population.individuals, fitnesses):
+                    ind.fitness.set_fitness(fitness_score)
                 self.fit(sub_population.individuals, fitnesses)
 
         # only one subpopulation in simple case
@@ -168,11 +170,6 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         eval_end_time = process_time()
         self.evaluation_time += eval_end_time - eval_start_time
 
-        print(f'gen {self.gen} population:\n')
-        for ind in sub_population.individuals:
-            print(ind.get_vector(), ind.fitness.get_pure_fitness())
-
-        print(f'gen {self.gen} best ind:', best_ind.get_vector())
         return best_ind
     
     def _get_best_individual(self, individuals: List[Individual]) -> Individual:
@@ -192,7 +189,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         gens, errors = self.model_error_history.keys(), self.model_error_history.values()
         self.approx_fitness_error = np.average(list(errors), weights=[self.gen_weight(gen) for gen in gens])
     
-    def _evaluate_individuals(self, individuals: List[Individual], evaluator: IndividualEvaluator) -> List[float]:
+    def _evaluate_individuals(self, individuals: List[Individual], evaluator: SimpleIndividualEvaluator) -> List[float]:
         """
         Evaluate the fitness scores of a given individuals list
 
@@ -217,13 +214,9 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
             
         # Evaluate the fitness of the individuals that have not been evaluated yet
         # (if caching is not enabled, this will be all individuals)
-        eval_futures = [
-            self.executor.submit(evaluator._evaluate_individual, ind)
-            for ind in individuals
-        ]
-
-        fitnesses = [future.result() for future in eval_futures]
-        return fitnesses
+        fitnesses = self.executor.map(evaluator.evaluate_individual, individuals)
+        
+        return list(fitnesses)
     
     def _update_dataframe(self, ind_vectors: List[List], fitnesses: List[float]):
         if self.df is None:
@@ -240,7 +233,6 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
 
             # if the same individual is evaluated multiple times, keep the last evaluation
             self.df.drop_duplicates(subset=range(n_features), keep='last', inplace=True)
-        print(f'gen {self.gen} df:\n', self.df)
 
     def fit(self, individuals: List[Individual], fitnesses: List[float]) -> None:
         """
@@ -277,7 +269,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         # self.approx_fitness_error = cross_val_score(self.model, X, y, cv=KFold(n_splits=5, shuffle=True)).mean()
         
         scores = []
-        kf = KFold(n_splits=5, shuffle=True)
+        kf = KFold(n_splits=self.n_folds, shuffle=True)
         for train_index, test_index in kf.split(X):
             sample_weight = w[train_index] if self.accumulate_population_data else None
             self.model.fit(X[train_index], y[train_index], sample_weight)

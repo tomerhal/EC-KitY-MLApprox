@@ -53,18 +53,25 @@ class ApproxStatistics(Statistics):
         self.approx_errors.append(pop_eval.approx_fitness_error)
 
         #real fitness
-        for ind in sub_pop.individuals:
-            ind.set_fitness_not_evaluated()
-            self.ind_eval.evaluate(ind, [])
-        fitnesses = np.array([ind.get_pure_fitness() for ind in sub_pop.individuals])
-        self.mean_fitnesses.append(np.mean(fitnesses))
-        self.median_fitnesses.append(np.median(fitnesses))
-        self.max_fitnesses.append(np.max(fitnesses))
-        self.min_fitnesses.append(np.min(fitnesses))
+        if sender.population_evaluator.is_approx:
+            for ind in sub_pop.individuals:
+                ind.set_fitness_not_evaluated()
+                self.ind_eval.evaluate(ind, [])
+            fitnesses = np.array([ind.get_pure_fitness() for ind in sub_pop.individuals])
+            self.mean_fitnesses.append(np.mean(fitnesses))
+            self.median_fitnesses.append(np.median(fitnesses))
+            self.max_fitnesses.append(np.max(fitnesses))
+            self.min_fitnesses.append(np.min(fitnesses))
 
-        for i, ind in enumerate(sub_pop.individuals):
-            ind.set_fitness_not_evaluated()
-            ind.fitness.set_fitness(approx_fitnesses[i])
+            for i, ind in enumerate(sub_pop.individuals):
+                ind.set_fitness_not_evaluated()
+                ind.fitness.set_fitness(approx_fitnesses[i])
+
+        else:
+            self.mean_fitnesses.append(np.mean(approx_fitnesses))
+            self.median_fitnesses.append(np.median(approx_fitnesses))
+            self.max_fitnesses.append(np.max(approx_fitnesses))
+            self.min_fitnesses.append(np.min(approx_fitnesses))
 
     def plot_statistics(self, dsname, model_type, model_params):
         assert len(self.mean_fitnesses) == len(self.median_fitnesses) == \

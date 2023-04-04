@@ -1,11 +1,13 @@
 import torch
+import torch.nn as nn
+import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 
 import ssl
 
 import numpy as np
-from time import process_time
+from time import time
 
 from net import Net
 
@@ -32,7 +34,7 @@ from plateau_switch_condition import PlateauSwitchCondition
 
 
 def main():
-    evoml_start_time = process_time()
+    evoml_start_time = time()
 
     dsname = 'CIFAR-10'
     model_type = Ridge
@@ -53,6 +55,8 @@ def main():
     trainset = torchvision.datasets.CIFAR10(root='./datasets', train=True,
                                             download=True, transform=transform)
     trainset = torch.utils.data.Subset(trainset, train_samples)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
+                                            shuffle=False, num_workers=1)
 
     testset = torchvision.datasets.CIFAR10(root='./datasets', train=False,
                                         download=True, transform=transform)
@@ -60,7 +64,8 @@ def main():
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
                                             shuffle=False, num_workers=1)
 
-    ind_eval = NeuralNetworkEvaluator(trainset, batch_size, 1)
+    n_epochs = 1
+    ind_eval = NeuralNetworkEvaluator(trainset, batch_size, n_epochs)
 
     evo_plateau = PlateauSwitchCondition(gens=10,threshold=0.005, switch_once=False)
     evoml_plateau = PlateauSwitchCondition(gens=5,threshold=0.05, switch_once=False)
@@ -72,7 +77,7 @@ def main():
             return evo_plateau.should_approximate(eval) and eval.approx_fitness_error < thresholds[dsname]
 
     evoml = SimpleEvolution(
-        Subpopulation(creators=GAIntVectorCreator(length=7, 
+        Subpopulation(creators=GAIntVectorCreator(length=7,
                                                   bounds=[
                                                         (6, 9),    # conv1_out
                                                         (3, 5),     # conv1_kernel_size
@@ -82,7 +87,7 @@ def main():
                                                         (100, 140),   # fc2_in
                                                         (60, 100)    # fc3_in
                                                         ]),
-                      population_size=6,
+                      population_size=4,
                       # user-defined fitness evaluation method
                       evaluator=ind_eval,
                       # maximization problem, so higher fitness is better
@@ -106,8 +111,10 @@ def main():
                                                          model_params=model_params,
                                                          ensemble=False,
                                                          gen_weight=square_gen_weight,
-                                                         should_approximate=should_approximate),
-        max_workers=1,
+                                                         should_approximate=should_approximate,
+                                                         n_folds=3),
+        executor='process',
+        max_workers=None,
         max_generation=2,
         statistics=ApproxStatistics(ind_eval)#PlotStatistics(),
     )
@@ -116,12 +123,17 @@ def main():
 
     print(f'Approximations: {evoml.population_evaluator.approx_count / evoml.max_generation}')
 
-    # calculate the accuracy of the classifier
-    best_model = Net(*evoml.best_of_run_.vector)
-    print('Accuracy on test set:', ind_eval.val_epoch(best_model, testloader))
+    # Evaluate performance of the best individual on the test set
+    best_vector = [int(x) for x in evoml.best_of_run_.vector]
+    best_model = Net(*best_vector)
+    optimizer, criterion = ind_eval.init_optimizer_lossfn(best_model)
+
+    # Train the model on the entire train set, then evaluate it on test set
+    test_score = ind_eval.train_net(best_model, criterion, optimizer, trainloader, testloader)
+    print('Accuracy on test set:', test_score)
     
 
-    evoml_time = process_time() - evoml_start_time
+    evoml_time = time() - evoml_start_time
     print('Total time:', evoml_time)
 
     plot_stats = evoml.statistics[0]

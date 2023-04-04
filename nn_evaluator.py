@@ -10,6 +10,8 @@ import numpy as np
 from eckity.evaluators.simple_individual_evaluator import SimpleIndividualEvaluator
 from eckity.genetic_encodings.ga.vector_individual import Vector
 
+from overrides import overrides
+
 from net import Net
 from utils import *
 
@@ -21,14 +23,39 @@ class NeuralNetworkEvaluator(SimpleIndividualEvaluator):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.trainset = trainset
 
-    def _evaluate_individual(self, individual: Vector) -> float:
+    @overrides
+    def evaluate_individual(self, individual: Vector) -> float:
         # Create a neural network with the individual's parameters
         model = Net(*individual.vector)
 
+        optimizer, criterion = self.init_optimizer_lossfn(model)
+        trainloader, valloader = self._init_dataloaders()
+        accuracy = self.train_net(model, criterion, optimizer, trainloader, valloader)
+        return accuracy
+        
+    
+    def train_net(self, model, criterion, optimizer, trainloader, valloader):
+        model.to(self.device)
+        model.train()
+        epochs_accuracies = dict()
+
+        for epoch in range(1, self.n_epochs+1):
+            self.train_epoch(model, trainloader, criterion, optimizer)
+            accuracy = self.val_epoch(model, valloader)
+            epochs_accuracies[epoch] = accuracy
+
+        weights = list(epochs_accuracies.keys())
+        return np.average(list(epochs_accuracies.values()), weights=weights)
+    
+    
+    def init_optimizer_lossfn(self, model):
         # Initialize optimizer and loss function
         optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
         criterion = nn.CrossEntropyLoss()
+        return optimizer, criterion
 
+    
+    def _init_dataloaders(self):
         train_samples = np.random.choice(range(CIFAR10_TRAIN_SAMPLES), size=int(CIFAR10_TRAIN_SAMPLES * 0.8), replace=False)
         val_samples = [i for i in range(CIFAR10_TRAIN_SAMPLES) if i not in train_samples]
 
@@ -45,17 +72,7 @@ class NeuralNetworkEvaluator(SimpleIndividualEvaluator):
             val_set, batch_size=self.batch_size,
             num_workers=1, pin_memory=True)
         
-        model.train()
-
-        epochs_accuracies = dict()
-
-        for epoch in range(1, self.n_epochs+1):
-            self.train_epoch(model, trainloader, criterion, optimizer)
-            accuracy = self.val_epoch(model, valloader)
-            epochs_accuracies[epoch] = accuracy
-
-        weights = list(epochs_accuracies.keys())
-        return np.average(list(epochs_accuracies.values()), weights=weights)
+        return trainloader, valloader
     
 
     def kfold_cv(self, model, criterion, optimizer):

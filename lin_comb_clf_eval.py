@@ -29,6 +29,6 @@ class LinCombClassificationfEvaluator(ClassificationEvaluator):
         scores = np.dot(self.X, np.array(vec))
         return np.where(scores > CLASSIFICATION_THRESHOLD, 1, 0)
     
-    def _evaluate_individual(self, individual):
+    def evaluate_individual(self, individual):
         y_pred = self.classify_individual(individual)
         return balanced_accuracy_score(y_true=self.y, y_pred=y_pred)
