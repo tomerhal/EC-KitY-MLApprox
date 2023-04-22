@@ -29,7 +29,7 @@ from lin_comb_clf_eval import LinCombClassificationfEvaluator
 from plateau_switch_condition import PlateauSwitchCondition
 from plot_statistics import PlotStatistics
 from timed_population_evaluator import TimedPopulationEvaluator
-from utils import *
+import utils
 
 def scoring(y_true, y_pred):
     return balanced_accuracy_score(y_true, y_pred)
@@ -40,9 +40,9 @@ def create_evoml_clf(n_features, model_type, model_params, dsname) -> SKClassifi
 
     def should_approximate(eval):
         if eval.is_approx:
-            return evoml_plateau.should_approximate(eval) and eval.approx_fitness_error < thresholds[dsname]
+            return evoml_plateau.should_approximate(eval) and eval.approx_fitness_error < utils.thresholds[dsname]
         else:
-            return evo_plateau.should_approximate(eval) and eval.approx_fitness_error < thresholds[dsname]
+            return evo_plateau.should_approximate(eval) and eval.approx_fitness_error < utils.thresholds[dsname]
 
     evoml = SimpleEvolution(
             Subpopulation(creators=GAFloatVectorCreator(length=n_features, bounds=(-1, 1)),
@@ -69,7 +69,7 @@ def create_evoml_clf(n_features, model_type, model_params, dsname) -> SKClassifi
                                                              model_type=model_type,
                                                              model_params=model_params,
                                                              should_approximate=should_approximate,
-                                                             gen_weight=square_gen_weight,
+                                                             gen_weight=utils.square_gen_weight,
                                                              ensemble=False
                                                             ),
             max_workers=1,
@@ -116,7 +116,7 @@ def fprint(fname, s):
 
 def save_params(fname, dsname, n_replicates, n_samples, n_features, model, model_params):
     fprint(fname, f' dsname: {dsname}\n n_samples: {n_samples}\n n_features: {n_features:}\n n_replicates: {n_replicates}\n\
- model: {model.__name__}\n model params: {model_params}\n approx threshold: {thresholds[dsname]}\n\n')
+ model: {model.__name__}\n model params: {model_params}\n approx threshold: {utils.thresholds[dsname]}\n\n')
 
 def get_args():
     parser = ArgumentParser()
@@ -154,7 +154,7 @@ def main():
     model_params = {'alpha': 2}
 
     # load the dataset
-    X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='datasets')
+    X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='../../../EC-KitY-MLApprox-Old/datasets')
     n_samples, n_features = X.shape
     save_params(fname, dsname, n_replicates, n_samples, n_features, model_type, model_params)
 

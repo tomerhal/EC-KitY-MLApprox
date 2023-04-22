@@ -2,10 +2,11 @@ import random
 import numpy as np
 import pandas as pd
 from time import process_time
+import subprocess
+import os
 
 from sklearn.metrics import mean_absolute_error
-from sklearn.base import RegressorMixin
-from sklearn.model_selection import KFold, cross_val_score
+from sklearn.model_selection import KFold
 
 from sklearn.linear_model import SGDRegressor
 from overrides import overrides
@@ -15,9 +16,9 @@ from eckity.evaluators.population_evaluator import PopulationEvaluator
 from eckity.fitness.fitness import Fitness
 from eckity.individual import Individual
 from eckity.population import Population
-from eckity.genetic_encodings.ga.vector_individual import Vector
 
 from typing import List
+import utils
 
 
 class ApproxMLPopulationEvaluator(PopulationEvaluator):
@@ -34,32 +35,27 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         how many generations should pass between samples, by default 1
     scoring : callable, optional
         evaluation metric for the model, by default mean_absolute_error
-    accumulate_population_data : bool, optional
-        whether to accumulate the population data for the model, by default False
     """
+
     def __init__(self,
-                should_approximate: callable = None,
-                population_sample_size=10,
-                gen_sample_step=1,
-                scoring=mean_absolute_error,
-                model_type=SGDRegressor,
-                model_params=None,
-                accumulate_population_data=False,
-                gen_weight=lambda gen: gen + 1,
-                cache_fitness=False,
-                ensemble=False,
-                n_folds=5):
+                 should_approximate: callable = None,
+                 population_sample_size=10,
+                 gen_sample_step=1,
+                 scoring=mean_absolute_error,
+                 model_type=SGDRegressor,
+                 model_params=None,
+                 gen_weight=lambda gen: gen + 1,
+                 ensemble=False,
+                 n_folds=5,
+                 handle_duplicates='ignore',
+                 sort_encoding=False,
+                 use_gpu=True):
         super().__init__()
         self.approx_fitness_error = float('inf')
         self.population_sample_size = population_sample_size
         self.gen_sample_step = gen_sample_step
         self.scoring = scoring
 
-        if cache_fitness and not accumulate_population_data:
-            raise ValueError('cache_fitness can only be enabled when accumulate_population_data is enabled')
-
-        self.accumulate_population_data = accumulate_population_data
-        self.cache_fitness = cache_fitness
         self.ensemble = ensemble
 
         if model_params is None:
@@ -79,8 +75,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         self.should_approximate = should_approximate
         self.is_approx = False
 
-        if accumulate_population_data:
-            self.df = None
+        self.df = None
 
         if ensemble:
             self.models = dict()
@@ -88,6 +83,10 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         self.model_error_history = dict()
         self.gen_weight = gen_weight
         self.n_folds = n_folds
+
+        self.handle_duplicates = handle_duplicates
+
+        self.use_gpu = use_gpu
 
     @overrides
     def _evaluate(self, population: Population) -> Individual:
@@ -116,27 +115,32 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         for sub_population in population.sub_populations:
             if self.is_approx:
                 self.approx_count += 1
+
+                # TODO REMOVE THIS - FOR DEBUGGING ONLY
+                with open('approx_count.txt', 'a') as f:
+                    f.write(f'{self.approx_count}')
+
                 # Approximate fitness scores of the whole population
                 preds = self.predict(sub_population.individuals)
                 for i, ind in enumerate(sub_population.individuals):
                     ind.fitness.set_fitness(preds[i])
-                
+
                 if self.gen > 0 and self.gen % self.gen_sample_step == 0:
                     # Sample a subset of the population and compute their fitness
-                    sample_size = self.population_sample_size if isinstance(self.population_sample_size, int) else int(len(sub_population.individuals) * self.population_sample_size)
+                    sample_size = self.population_sample_size if isinstance(self.population_sample_size, int) else int(
+                        len(sub_population.individuals) * self.population_sample_size)
 
                     if sample_size > 0:
                         sample_inds = random.sample(sub_population.individuals, sample_size)
                         fitnesses = self._evaluate_individuals(sample_inds, sub_population.evaluator)
 
                         # update population dataframe with sampled individuals
-                        if self.accumulate_population_data:
-                            vecs = [ind.get_vector() for ind in sample_inds]
-                            self._update_dataframe(vecs, fitnesses)
+                        vecs = [ind.get_vector() for ind in sample_inds]
+                        self._update_dataframe(vecs, fitnesses)
 
                         # train the model with the sampled individuals
                         self.fit(sample_inds, fitnesses)
-                
+
             else:
                 # Compute fitness scores of the whole population
                 fitnesses = self._evaluate_individuals(sub_population.individuals, sub_population.evaluator)
@@ -149,19 +153,16 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
 
         best_ind = individuals[0]
 
-        if self.accumulate_population_data:
-            gen_df = self.df[self.df['gen'] == self.gen]
-            if gen_df.empty:
-                return None
-            else:
-                best_fitness_idx = gen_df['fitness'].idxmax()
-                best_fitness = gen_df.loc[best_fitness_idx]['fitness']
-                best_vector = gen_df.loc[best_fitness_idx][:-2].to_list()
-                best_ind = best_ind.clone()
-                best_ind.set_vector(best_vector)
-                best_ind.fitness.set_fitness(best_fitness)
+        gen_df = self.df[self.df['gen'] == self.gen]
+        if gen_df.empty:
+            return None
         else:
-            best_ind = self._get_best_individual(individuals)
+            best_fitness_idx = gen_df['fitness'].idxmax()
+            best_fitness = gen_df.loc[best_fitness_idx]['fitness']
+            best_vector = gen_df.loc[best_fitness_idx][:-2].to_list()
+            best_ind = best_ind.clone()
+            best_ind.set_vector(best_vector)
+            best_ind.fitness.set_fitness(best_fitness)
 
         self.best_in_gen = self._get_best_individual(individuals)
 
@@ -171,7 +172,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         self.evaluation_time += eval_end_time - eval_start_time
 
         return best_ind
-    
+
     def _get_best_individual(self, individuals: List[Individual]) -> Individual:
         best_ind: Individual = individuals[0]
         best_fitness: Fitness = best_ind.fitness
@@ -181,14 +182,14 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
                 best_ind = ind
                 best_fitness = ind.fitness
         return best_ind
-    
+
     def _update_model_error(self, individuals: List[Individual], fitnesses):
         # update the model's performance
         err = self.eval(individuals, fitnesses)
         self.model_error_history[self.gen] = err
         gens, errors = self.model_error_history.keys(), self.model_error_history.values()
         self.approx_fitness_error = np.average(list(errors), weights=[self.gen_weight(gen) for gen in gens])
-    
+
     def _evaluate_individuals(self, individuals: List[Individual], evaluator: SimpleIndividualEvaluator) -> List[float]:
         """
         Evaluate the fitness scores of a given individuals list
@@ -203,36 +204,71 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         List[float]
             list of fitness scores, with respect to the order of the individuals
         """
-        if self.gen > 0 and self.cache_fitness:
-            # search for individuals in the first n-1 columns of the dataframe
-            # the last column is the fitness
-            df = self.df
-            
-            for ind in individuals:
-                if ind.vector in df.values[:, :-1]:
-                    ind.fitness.set_fitness(df[df.values[:, :-1] == ind.vector].values[0][-1])
-            
+
+        device = 'gpu' if self.use_gpu else 'cpu'
+
         # Evaluate the fitness of the individuals that have not been evaluated yet
-        # (if caching is not enabled, this will be all individuals)
-        fitnesses = self.executor.map(evaluator.evaluate_individual, individuals)
-        
-        return list(fitnesses)
-    
+        subprocesses = []
+        num_inds_main_proc = int(len(individuals) / 20)
+
+        # create a job script for the rest of the individuals and submit them
+        for i, ind in enumerate(individuals[num_inds_main_proc:]):
+            # create a job script for the individual
+            vector = ind.get_vector()
+            sbatch_str = utils.generate_sbatch_str(self.gen, i, vector, self.use_gpu)
+            with open(f'jobs/{device}_{self.gen}_{i}.sh', 'w') as f:
+                f.write(sbatch_str)
+
+            # Submit the job
+            cmdline = ['sbatch', f'jobs/{device}_{self.gen}_{i}.sh']
+            subprocesses.append(subprocess.Popen(cmdline))
+
+        # evaluate the first 5% individuals in the main process
+        fitness_scores = [evaluator.evaluate_individual(ind) for ind in individuals[:num_inds_main_proc]]
+
+        # Wait for all jobs to finish and extract fitness scores
+        for i, process in enumerate(subprocesses):
+            try:
+                process.wait(timeout=360)
+
+                # extract job id and fitness from job .out file
+                with open(f'jobs/{device}_job_{self.gen}_{i}.out', 'r') as f:
+                    job_id = f.readline().strip().split('=')[-1]
+                    fitness = float(f.read())
+
+                fitness_scores.append(fitness)
+            except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+                print(f'Job {device}_{self.gen}_{i} timed out or failed. error: {e}')
+                subprocess.Popen(['scancel', job_id])
+                fitness_scores.append(0.0)
+                continue
+
+        # remove job scripts and output files
+        for i in range(len(subprocesses)):
+            try:
+                os.remove(f'jobs/{device}_{self.gen}_{i}.sh')
+                os.remove(f'jobs/{device}_job_{self.gen}_{i}.out')
+            except FileNotFoundError as e:
+                print(f'File not found in job {device}_{self.gen}_{i}:', e)
+
+        return fitness_scores
+
     def _update_dataframe(self, ind_vectors: List[List], fitnesses: List[float]):
+        df = pd.DataFrame(np.array(ind_vectors))
+        df['fitness'] = np.array(fitnesses)
+        df['gen'] = self.gen
+
         if self.df is None:
-            self.df = pd.DataFrame(np.array(ind_vectors))
-            self.df['fitness'] = np.array(fitnesses)
-            self.df['gen'] = self.gen
+            self.df = df
+
         else:
-            df = pd.DataFrame(np.array(ind_vectors))
-            df['fitness'] = np.array(fitnesses)
-            df['gen'] = self.gen
-
             self.df = pd.concat([self.df, df], ignore_index=True, copy=False)
-            n_features= self.df.shape[1] - 2
+            n_features = self.df.shape[1] - 2
 
-            # if the same individual is evaluated multiple times, keep the last evaluation
-            self.df.drop_duplicates(subset=range(n_features), keep='last', inplace=True)
+            # Handle rows with duplicate individuals:
+            if self.handle_duplicates in ['last', 'first']:
+                # If the same individual is evaluated multiple times, keep the first/last evaluation.
+                self.df.drop_duplicates(subset=range(n_features), keep=self.handle_duplicates, inplace=True)
 
     def fit(self, individuals: List[Individual], fitnesses: List[float]) -> None:
         """
@@ -258,20 +294,17 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         # Vector of generation number of each individual in the dataframe (used for sample weights)
         w = None
 
-        if self.accumulate_population_data:
-            self._update_dataframe(ind_vectors, fitnesses)
-            X, y = self.df.iloc[:, :-2].to_numpy(), self.df['fitness'].to_numpy()
-            w = self.gen_weight(self.df['gen'].to_numpy())
-        else:
-            X, y = np.array(ind_vectors), np.array(fitnesses)
+        self._update_dataframe(ind_vectors, fitnesses)
+        X, y = self.df.iloc[:, :-2].to_numpy(), self.df['fitness'].to_numpy()
+        w = self.gen_weight(self.df['gen'].to_numpy())
 
         # Too slow
         # self.approx_fitness_error = cross_val_score(self.model, X, y, cv=KFold(n_splits=5, shuffle=True)).mean()
-        
+
         scores = []
         kf = KFold(n_splits=self.n_folds, shuffle=True)
         for train_index, test_index in kf.split(X):
-            sample_weight = w[train_index] if self.accumulate_population_data else None
+            sample_weight = w[train_index]
             self.model.fit(X[train_index], y[train_index], sample_weight)
             scores.append(self.scoring(y[test_index], self.model.predict(X[test_index])))
         self.approx_fitness_error = np.mean(scores)
@@ -302,7 +335,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
 
         else:
             preds = self.model.predict(ind_vectors)
-        
+
         # enforce the model's prediction to be between 0 and 1
         return [1.0 if pred > 1 else 0.0 if pred < 0 else pred for pred in preds]
 

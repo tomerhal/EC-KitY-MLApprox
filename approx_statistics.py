@@ -79,6 +79,16 @@ class ApproxStatistics(Statistics):
                len(self.mean_approx_fitnesses) == len(self.median_approx_fitnesses) == \
                len(self.max_approx_fitnesses) == len(self.min_approx_fitnesses), \
                'Statistics lists are not the same length'
+        
+        print('mean_approx_fitnesses =', self.mean_approx_fitnesses)
+        print('median_approx_fitnesses =', self.median_approx_fitnesses)
+        print('max_approx_fitnesses =', self.max_approx_fitnesses)
+        print('min_approx_fitnesses =', self.min_approx_fitnesses)
+        print('mean_fitnesses =', self.mean_fitnesses)
+        print('median_fitnesses =', self.median_fitnesses)
+        print('max_fitnesses =', self.max_fitnesses)
+        print('min_fitnesses =', self.min_fitnesses)
+        print('approx_errors =', self.approx_errors)
 
         plt.title(f'{dsname} {model_type.__name__} {model_params}')
         plt.plot(self.mean_approx_fitnesses, label='approx mean')

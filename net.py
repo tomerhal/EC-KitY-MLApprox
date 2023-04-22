@@ -22,6 +22,11 @@ class Net(nn.Module):
         self.fc2 = nn.Linear(fc2_in, fc3_in)
         self.fc3 = nn.Linear(fc3_in, 10)
 
+    def zero_weights(self):
+        for layer in [self.conv1, self.conv2, self.fc1, self.fc2, self.fc3]:
+            layer.weight.data.fill_(0.0)
+            layer.bias.data.fill_(0.0)
+
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))

@@ -1,8 +1,8 @@
 import torch
-import torch.nn as nn
-import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
+
+import sys
 
 import ssl
 
@@ -20,7 +20,7 @@ from eckity.creators.ga_creators.int_vector_creator import GAIntVectorCreator
 
 from approx_statistics import ApproxStatistics
 from plot_statistics import PlotStatistics
-from utils import *
+import utils
 
 from eckity.genetic_operators.selections.tournament_selection import TournamentSelection
 from eckity.genetic_operators.crossovers.vector_k_point_crossover import VectorKPointsCrossover
@@ -36,6 +36,17 @@ from plateau_switch_condition import PlateauSwitchCondition
 def main():
     evoml_start_time = time()
 
+    if len(sys.argv) < 2:
+        print('Usage: python nn_experiment.py <gpu | cpu>')
+        exit(1)
+
+    if sys.argv[1] == 'gpu':
+        use_gpu = True
+    elif sys.argv[1] == 'cpu':
+        use_gpu = False
+    else:
+        raise ValueError('Invalid argument: ' + sys.argv[1])
+
     dsname = 'CIFAR-10'
     model_type = Ridge
     model_params = {'alpha': 2}
@@ -49,8 +60,8 @@ def main():
     
     ssl._create_default_https_context = ssl._create_unverified_context
 
-    train_samples = np.random.choice(50000, size=CIFAR10_TRAIN_SAMPLES, replace=False)
-    test_samples = np.random.choice(10000, size=CIFAR10_TEST_SAMPLES, replace=False)
+    train_samples = np.random.choice(50000, size=utils.CIFAR10_TRAIN_SAMPLES, replace=False)
+    test_samples = np.random.choice(10000, size=utils.CIFAR10_TEST_SAMPLES, replace=False)
 
     trainset = torchvision.datasets.CIFAR10(root='./datasets', train=True,
                                             download=True, transform=transform)
@@ -72,9 +83,9 @@ def main():
 
     def should_approximate(eval):
         if eval.is_approx:
-            return evoml_plateau.should_approximate(eval) and eval.approx_fitness_error < thresholds[dsname]
+            return evoml_plateau.should_approximate(eval) and eval.approx_fitness_error < utils.thresholds[dsname]
         else:
-            return evo_plateau.should_approximate(eval) and eval.approx_fitness_error < thresholds[dsname]
+            return evo_plateau.should_approximate(eval) and eval.approx_fitness_error < utils.thresholds[dsname]
 
     evoml = SimpleEvolution(
         Subpopulation(creators=GAIntVectorCreator(length=7,
@@ -105,14 +116,14 @@ def main():
         breeder=SimpleBreeder(),
         population_evaluator=ApproxMLPopulationEvaluator(population_sample_size=0.2,
                                                          gen_sample_step=1,
-                                                         accumulate_population_data=True,
-                                                         cache_fitness=False,
                                                          model_type=model_type,
                                                          model_params=model_params,
                                                          ensemble=False,
-                                                         gen_weight=square_gen_weight,
+                                                         gen_weight=utils.square_gen_weight,
                                                          should_approximate=should_approximate,
-                                                         n_folds=3),
+                                                         handle_duplicates='ignore',
+                                                         n_folds=3,
+                                                         use_gpu=use_gpu),
         executor='process',
         max_workers=None,
         max_generation=2,
@@ -136,8 +147,8 @@ def main():
     evoml_time = time() - evoml_start_time
     print('Total time:', evoml_time)
 
-    plot_stats = evoml.statistics[0]
-    plot_stats.plot_statistics(dsname, model_type, model_params)
+    stats = evoml.statistics[0]
+    stats.plot_statistics(dsname, model_type, model_params)
 
 if __name__ == "__main__":
     main()

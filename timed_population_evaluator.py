@@ -1,6 +1,7 @@
 from eckity.evaluators.simple_population_evaluator import SimplePopulationEvaluator
 from time import process_time
 
+
 class TimedPopulationEvaluator(SimplePopulationEvaluator):
     def __init__(self):
         super().__init__()

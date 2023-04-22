@@ -16,7 +16,7 @@ from eckity.creators.ga_creators.float_vector_creator import GAFloatVectorCreato
 
 from approx_statistics import ApproxStatistics
 from plot_statistics import PlotStatistics
-from utils import *
+import utils
 
 from eckity.genetic_operators.selections.tournament_selection import TournamentSelection
 from eckity.genetic_operators.crossovers.vector_k_point_crossover import VectorKPointsCrossover
@@ -58,11 +58,11 @@ def main():
             test_scores = []
             full_times = []
             
-            for dsname in BIG_DATASETS:
+            for dsname in utils.BIG_DATASETS:
                 start_time = process_time()
 
                 # load the dataset
-                X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='datasets')
+                X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='../../../EC-KitY-MLApprox-Old/datasets')
                 # split the dataset to train and test set
                 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
 
@@ -96,7 +96,7 @@ def main():
                                                                     model_type=model_type,
                                                                     model_params=model_params,
                                                                     ensemble=True,
-                                                                    gen_weight=square_gen_weight,
+                                                                    gen_weight=utils.square_gen_weight,
                                                                     should_approximate=lambda eval: eval.gen > threshold),
                     max_workers=1,
                     max_generation=100

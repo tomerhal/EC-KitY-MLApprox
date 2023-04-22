@@ -39,7 +39,7 @@ def main():
     dsname = sys.argv[1]
 
     # load the magic dataset
-    X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='datasets')
+    X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='../../../EC-KitY-MLApprox-Old/datasets')
     # split the dataset to train and test set
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 

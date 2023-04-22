@@ -6,27 +6,41 @@ from torch.utils.data import SubsetRandomSampler, DataLoader, Subset
 from sklearn.model_selection import KFold
 
 import numpy as np
+import sys
 
 from eckity.evaluators.simple_individual_evaluator import SimpleIndividualEvaluator
-from eckity.genetic_encodings.ga.vector_individual import Vector
+from eckity.genetic_encodings.ga.int_vector import IntVector
+from eckity.fitness.simple_fitness import SimpleFitness
 
 from overrides import overrides
 
+import pickle as pkl
+
 from net import Net
-from utils import *
+import utils
 
 class NeuralNetworkEvaluator(SimpleIndividualEvaluator):
-    def __init__(self, trainset, batch_size, n_epochs):
+    def __init__(self, trainset, batch_size, n_epochs, zero_weights=False):
         super().__init__()
         self.batch_size = batch_size
         self.n_epochs = n_epochs
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.trainset = trainset
 
+        self.zero_weights = zero_weights
+
+        # Dump this instance into a pickle file, which will later be used for evaluation
+        with open('nn_evaluator.pkl', 'wb') as f:
+            pkl.dump(self, f)
+
     @overrides
-    def evaluate_individual(self, individual: Vector) -> float:
+    def evaluate_individual(self, individual: IntVector) -> float:
         # Create a neural network with the individual's parameters
         model = Net(*individual.vector)
+
+        if self.zero_weights:
+            model.zero_weights()
 
         optimizer, criterion = self.init_optimizer_lossfn(model)
         trainloader, valloader = self._init_dataloaders()
@@ -56,8 +70,8 @@ class NeuralNetworkEvaluator(SimpleIndividualEvaluator):
 
     
     def _init_dataloaders(self):
-        train_samples = np.random.choice(range(CIFAR10_TRAIN_SAMPLES), size=int(CIFAR10_TRAIN_SAMPLES * 0.8), replace=False)
-        val_samples = [i for i in range(CIFAR10_TRAIN_SAMPLES) if i not in train_samples]
+        train_samples = np.random.choice(range(utils.CIFAR10_TRAIN_SAMPLES), size=int(utils.CIFAR10_TRAIN_SAMPLES * 0.8), replace=False)
+        val_samples = [i for i in range(utils.CIFAR10_TRAIN_SAMPLES) if i not in train_samples]
 
         train_set = Subset(self.trainset, train_samples)
         val_set = Subset(self.trainset, val_samples)
@@ -65,12 +79,12 @@ class NeuralNetworkEvaluator(SimpleIndividualEvaluator):
         # Create a DataLoader for the training data
         trainloader = DataLoader(
             train_set, batch_size=self.batch_size,
-            num_workers=1, pin_memory=True)
+            num_workers=2, pin_memory=True)
 
         # Create a DataLoader for the validation data
         valloader = DataLoader(
             val_set, batch_size=self.batch_size,
-            num_workers=1, pin_memory=True)
+            num_workers=2, pin_memory=True)
         
         return trainloader, valloader
     
@@ -135,3 +149,26 @@ class NeuralNetworkEvaluator(SimpleIndividualEvaluator):
                 correct += (predicted == labels).sum().item()
 
         return correct / total
+    
+def main():
+    if len(sys.argv) == 1:
+        print('Usage: python nn_evaluator.py <individual_vector_cells> (seperated by whitespaces)')
+        sys.exit(1)
+
+    # Initialize the evaluator
+    with open('nn_evaluator.pkl', 'rb') as f:
+        nn_evaluator = pkl.load(f)
+
+    # Parse the given individual, then evaluate it
+    vector = [int(cell) for cell in sys.argv[1:]]
+
+    ind = IntVector(SimpleFitness(), length=len(vector))
+    ind.set_vector(vector)
+    fitness = nn_evaluator.evaluate_individual(ind)
+
+    # Write the fitness to stdout
+    print(fitness, flush=True)
+
+
+if __name__ == '__main__':
+    main()
