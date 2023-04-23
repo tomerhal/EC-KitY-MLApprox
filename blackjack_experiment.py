@@ -2,6 +2,8 @@ import numpy as np
 from time import process_time
 
 from sklearn.linear_model import Ridge
+from blackjack_vector_k_point_crossover import BlackjackVectorKPointsCrossover
+from blackjack_vector_n_point_mutation import BlackjackFloatVectorGaussNPointMutation, BlackjackFloatVectorUniformNPointMutation
 
 from eckity.algorithms.simple_evolution import SimpleEvolution
 from eckity.breeders.simple_breeder import SimpleBreeder
@@ -54,9 +56,9 @@ def main():
                       elitism_rate=0.0,
                       # genetic operators sequence to be applied in each generation
                       operators_sequence=[
-                          VectorKPointsCrossover(probability=0.7, k=2),
-                          FloatVectorGaussNPointMutation(probability=0.3, n=5),
-                          FloatVectorUniformNPointMutation(probability=0.1, n=5)
+                          BlackjackVectorKPointsCrossover(probability=0.7, k=2),
+                          BlackjackFloatVectorGaussNPointMutation(probability=0.3, n=5),
+                          BlackjackFloatVectorUniformNPointMutation(probability=0.1, n=5)
                       ],
                       selection_methods=[
                           # (selection method, selection probability) tuple
