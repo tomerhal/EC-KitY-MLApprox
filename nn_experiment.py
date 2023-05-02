@@ -40,11 +40,7 @@ def main():
         print('Usage: python nn_experiment.py <gpu | cpu>')
         exit(1)
 
-    if sys.argv[1] == 'gpu':
-        use_gpu = True
-    elif sys.argv[1] == 'cpu':
-        use_gpu = False
-    else:
+    if sys.argv[1] not in ['cpu', 'gpu']:
         raise ValueError('Invalid argument: ' + sys.argv[1])
 
     dsname = 'CIFAR-10'
@@ -75,10 +71,12 @@ def main():
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
                                             shuffle=False, num_workers=1)
 
-    n_epochs = 1
+    n_epochs = 10
     ind_eval = NeuralNetworkEvaluator(trainset, batch_size, n_epochs)
 
+    # evolution -> ML switch condition
     evo_plateau = PlateauSwitchCondition(gens=10,threshold=0.005, switch_once=False)
+    # ML -> evolution switch condition
     evoml_plateau = PlateauSwitchCondition(gens=5,threshold=0.05, switch_once=False)
 
     def should_approximate(eval):
@@ -98,7 +96,7 @@ def main():
                                                         (100, 140),   # fc2_in
                                                         (60, 100)    # fc3_in
                                                         ]),
-                      population_size=4,
+                      population_size=20,
                       # user-defined fitness evaluation method
                       evaluator=ind_eval,
                       # maximization problem, so higher fitness is better
@@ -123,10 +121,8 @@ def main():
                                                          should_approximate=should_approximate,
                                                          handle_duplicates='ignore',
                                                          n_folds=3,
-                                                         use_gpu=use_gpu),
-        executor='process',
-        max_workers=None,
-        max_generation=2,
+                                                         eval_method=sys.argv[1]),
+        max_generation=50,
         statistics=ApproxStatistics(ind_eval)#PlotStatistics(),
     )
 

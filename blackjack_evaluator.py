@@ -74,7 +74,7 @@ class BlackjackEvaluator(SimpleIndividualEvaluator):
             epsilon = self.decay_epsilon(epsilon)
 
         env.close()
-        individual.set_rewards(np.flatten(rewards))
+        individual.set_rewards((rewards.flatten()))
         return np.sum(np.array(env.return_queue).flatten())
 
     def get_action(self, obs: Tuple[int, int, bool], env: gym.Env, q_values: np.ndarray, epsilon: float) -> int:
@@ -120,6 +120,7 @@ def main():
 
     # Write the fitness to stdout
     print(fitness, flush=True)
+    print(list(ind.get_rewards()))
 
 if __name__ == '__main__':
     main()

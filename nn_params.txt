@@ -1,0 +1,12 @@
+nn1: 
+evo_plateau = PlateauSwitchCondition(gens=10,threshold=0.005, switch_once=False)
+evoml_plateau = PlateauSwitchCondition(gens=5,threshold=0.05, switch_once=False)
+n_epochs = 1
+population_size=20
+max_generation=50
+nn2:
+evo_plateau = PlateauSwitchCondition(gens=10,threshold=0.005, switch_once=False)
+evoml_plateau = PlateauSwitchCondition(gens=5,threshold=0.05, switch_once=False)
+n_epochs = 10
+population_size=20
+max_generation=50

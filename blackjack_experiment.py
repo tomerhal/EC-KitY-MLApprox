@@ -2,8 +2,6 @@ import numpy as np
 from time import process_time
 
 from sklearn.linear_model import Ridge
-from blackjack_vector_k_point_crossover import BlackjackVectorKPointsCrossover
-from blackjack_vector_n_point_mutation import BlackjackFloatVectorGaussNPointMutation, BlackjackFloatVectorUniformNPointMutation
 
 from eckity.algorithms.simple_evolution import SimpleEvolution
 from eckity.breeders.simple_breeder import SimpleBreeder
@@ -17,10 +15,9 @@ import utils
 
 from eckity.genetic_operators.selections.tournament_selection import TournamentSelection
 from eckity.genetic_operators.crossovers.vector_k_point_crossover import VectorKPointsCrossover
-from eckity.genetic_operators.mutations.vector_random_mutation import FloatVectorUniformNPointMutation
-from eckity.genetic_operators.mutations.vector_random_mutation import FloatVectorGaussNPointMutation
 
-
+from blackjack_creator import BlackjackVectorCreator
+from blackjack_mutation import BlackjackGaussMutation, BlackjackUniformMutation
 from blackjack_evaluator import BlackjackEvaluator
 from blackjack_utils import STATE_ACTION_SPACE_SHAPE
 
@@ -45,10 +42,11 @@ def main():
         else:
             return evo_plateau.should_approximate(eval) and eval.approx_fitness_error < 0.1
 
+    length = np.prod(STATE_ACTION_SPACE_SHAPE)
 
     evoml = SimpleEvolution(
-        Subpopulation(creators=GAFloatVectorCreator(length=np.prod(STATE_ACTION_SPACE_SHAPE), bounds=(0, 1)),
-                      population_size=10,
+        Subpopulation(creators=BlackjackVectorCreator(length=length, bounds=(0, 1)),
+                      population_size=100,
                       # user-defined fitness evaluation method
                       evaluator=ind_eval,
                       # maximization problem, so higher fitness is better
@@ -56,9 +54,9 @@ def main():
                       elitism_rate=0.0,
                       # genetic operators sequence to be applied in each generation
                       operators_sequence=[
-                          BlackjackVectorKPointsCrossover(probability=0.7, k=2),
-                          BlackjackFloatVectorGaussNPointMutation(probability=0.3, n=5),
-                          BlackjackFloatVectorUniformNPointMutation(probability=0.1, n=5)
+                          VectorKPointsCrossover(probability=0.7, k=2),
+                          BlackjackUniformMutation(probability=0.3, n=length//10),
+                        #   BlackjackGaussMutation(probability=0.1, n=5)
                       ],
                       selection_methods=[
                           # (selection method, selection probability) tuple
@@ -74,9 +72,8 @@ def main():
                                                          should_approximate=should_approximate,
                                                          handle_duplicates='ignore',
                                                          n_folds=3,
-                                                         use_gpu=False),
-        max_workers=1,
-        max_generation=10,
+                                                         eval_method='cpu'),
+        max_generation=100,
         statistics=ApproxStatistics(ind_eval)#PlotStatistics(),
     )
     evoml.evolve()

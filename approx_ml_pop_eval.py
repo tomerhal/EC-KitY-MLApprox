@@ -35,6 +35,8 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         how many generations should pass between samples, by default 1
     scoring : callable, optional
         evaluation metric for the model, by default mean_absolute_error
+    eval_method: {'process', 'thread', 'gpu', 'cpu'}, default='process'
+        evaluation method - proccess/thread for local evaluation, gpu/cpu for remote evaluation using slurm
     """
 
     def __init__(self,
@@ -49,7 +51,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
                  n_folds=5,
                  handle_duplicates='ignore',
                  sort_encoding=False,
-                 use_gpu=True):
+                 eval_method='process'):
         super().__init__()
         self.approx_fitness_error = float('inf')
         self.population_sample_size = population_sample_size
@@ -86,7 +88,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
 
         self.handle_duplicates = handle_duplicates
 
-        self.use_gpu = use_gpu
+        self.eval_method = eval_method
 
     @overrides
     def _evaluate(self, population: Population) -> Individual:
@@ -114,11 +116,12 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
 
         for sub_population in population.sub_populations:
             if self.is_approx:
-                self.approx_count += 1
+                # reset all rewards fields
+                for ind in sub_population.individuals:
+                    if hasattr(ind, 'rewards'):
+                        ind.reset_rewards()
 
-                # TODO REMOVE THIS - FOR DEBUGGING ONLY
-                with open('approx_count.txt', 'a') as f:
-                    f.write(f'{self.approx_count}')
+                self.approx_count += 1
 
                 # Approximate fitness scores of the whole population
                 preds = self.predict(sub_population.individuals)
@@ -132,7 +135,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
 
                     if sample_size > 0:
                         sample_inds = random.sample(sub_population.individuals, sample_size)
-                        fitnesses = self._evaluate_individuals(sample_inds, sub_population.evaluator)
+                        fitnesses = self._evaluate_individuals(sample_inds, sub_population.evaluator, sample=True)
 
                         # update population dataframe with sampled individuals
                         vecs = [ind.get_vector() for ind in sample_inds]
@@ -143,7 +146,7 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
 
             else:
                 # Compute fitness scores of the whole population
-                fitnesses = self._evaluate_individuals(sub_population.individuals, sub_population.evaluator)
+                fitnesses = self._evaluate_individuals(sub_population.individuals, sub_population.evaluator, sample=False)
                 for ind, fitness_score in zip(sub_population.individuals, fitnesses):
                     ind.fitness.set_fitness(fitness_score)
                 self.fit(sub_population.individuals, fitnesses)
@@ -190,7 +193,9 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
         gens, errors = self.model_error_history.keys(), self.model_error_history.values()
         self.approx_fitness_error = np.average(list(errors), weights=[self.gen_weight(gen) for gen in gens])
 
-    def _evaluate_individuals(self, individuals: List[Individual], evaluator: SimpleIndividualEvaluator) -> List[float]:
+    def _evaluate_individuals(self, individuals: List[Individual],
+                              evaluator: SimpleIndividualEvaluator,
+                              sample=False) -> List[float]:
         """
         Evaluate the fitness scores of a given individuals list
 
@@ -205,49 +210,66 @@ class ApproxMLPopulationEvaluator(PopulationEvaluator):
             list of fitness scores, with respect to the order of the individuals
         """
 
-        device = 'gpu' if self.use_gpu else 'cpu'
+        device = self.eval_method
+
+        if self.eval_method in ['thread', 'process']:
+            eval_results = self.executor.map(evaluator.evaluate_individual, individuals)
+            return list(eval_results)
 
         # Evaluate the fitness of the individuals that have not been evaluated yet
         subprocesses = []
         num_inds_main_proc = int(len(individuals) / 20)
 
         # create a job script for the rest of the individuals and submit them
-        for i, ind in enumerate(individuals[num_inds_main_proc:]):
+        for i, ind in enumerate(individuals[num_inds_main_proc:], start=num_inds_main_proc):
             # create a job script for the individual
             vector = ind.get_vector()
-            sbatch_str = utils.generate_sbatch_str(self.gen, i, vector, self.use_gpu)
-            with open(f'jobs/{device}_{self.gen}_{i}.sh', 'w') as f:
+            sbatch_str = utils.generate_sbatch_str(self.gen, i, vector, device)
+            with open(f'jobs/{device}/{self.gen}_{i}.sh', 'w') as f:
                 f.write(sbatch_str)
 
             # Submit the job
-            cmdline = ['sbatch', f'jobs/{device}_{self.gen}_{i}.sh']
+            cmdline = ['sbatch', f'jobs/{device}/{self.gen}_{i}.sh']
             subprocesses.append(subprocess.Popen(cmdline))
 
         # evaluate the first 5% individuals in the main process
         fitness_scores = [evaluator.evaluate_individual(ind) for ind in individuals[:num_inds_main_proc]]
 
         # Wait for all jobs to finish and extract fitness scores
-        for i, process in enumerate(subprocesses):
+        for i, process in enumerate(subprocesses, start=num_inds_main_proc):
             try:
                 process.wait(timeout=360)
 
                 # extract job id and fitness from job .out file
-                with open(f'jobs/{device}_job_{self.gen}_{i}.out', 'r') as f:
+                with open(f'jobs/{device}/job_{self.gen}_{i}.out', 'r') as f:
                     job_id = f.readline().strip().split('=')[-1]
-                    fitness = float(f.read())
+                    # parse fitness score
+                    fitness = float(f.readline())
+
+                    if not sample:
+                        # parse rewards data and update rewards field (gym)
+                        rewards_str = f.readline()
+                        if rewards_str.startswith('rewards'):
+                            rewards = np.array([float(r) for r in rewards_str.split('=')[-1][1:-1].split(',')])
+                            individuals[i].set_rewards(rewards)
 
                 fitness_scores.append(fitness)
-            except (subprocess.TimeoutExpired, FileNotFoundError) as e:
-                print(f'Job {device}_{self.gen}_{i} timed out or failed. error: {e}')
+            except (subprocess.TimeoutExpired, FileNotFoundError, ValueError) as e:
+                print(f'Job {device}/{self.gen}_{i} timed out or failed. error: {e}')
                 subprocess.Popen(['scancel', job_id])
                 fitness_scores.append(0.0)
-                continue
+
+                error_file_path = f'jobs/{device}/job_{self.gen}_{i}.out'
+                if os.path.exists(error_file_path):
+                    with open(error_file_path, 'r') as f:
+                        print(f.read())
+                    
 
         # remove job scripts and output files
-        for i in range(len(subprocesses)):
+        for i in range(num_inds_main_proc, len(subprocesses) + num_inds_main_proc):
             try:
-                os.remove(f'jobs/{device}_{self.gen}_{i}.sh')
-                os.remove(f'jobs/{device}_job_{self.gen}_{i}.out')
+                os.remove(f'jobs/{device}/{self.gen}_{i}.sh')
+                os.remove(f'jobs/{device}/job_{self.gen}_{i}.out')
             except FileNotFoundError as e:
                 print(f'File not found in job {device}_{self.gen}_{i}:', e)
 
