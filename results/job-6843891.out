@@ -1,0 +1,37 @@
+SLURM_JOBID=6843891
+SLURM_JOB_NODELIST=cs-cpu-05
+Submitted batch job 6843894
+debug: random seed = 1685873582.4404519
+Traceback (most recent call last):
+  File "/sise/home/itaitz/EC-KitY/evoml_experiment.py", line 119, in <module>
+    main()
+  File "/sise/home/itaitz/EC-KitY/evoml_experiment.py", line 108, in main
+    evoml.evolve()
+  File "/sise/home/itaitz/EC-KitY/eckity/algorithms/algorithm.py", line 182, in evolve
+    self.initialize()
+  File "/sise/home/itaitz/EC-KitY/eckity/algorithms/simple_evolution.py", line 123, in initialize
+    super().initialize()
+  File "/sise/home/itaitz/EC-KitY/eckity/algorithms/algorithm.py", line 230, in initialize
+    self.best_of_run_ = self.population_evaluator.act(self.population)
+  File "/sise/home/itaitz/EC-KitY/eckity/event_based_operator.py", line 37, in act
+    return self.act_and_publish_before_after(lambda: self.apply_operator(payload))
+  File "/sise/home/itaitz/EC-KitY/eckity/before_after_publisher.py", line 42, in act_and_publish_before_after
+    return_val = act_func()
+  File "/sise/home/itaitz/EC-KitY/eckity/event_based_operator.py", line 37, in <lambda>
+    return self.act_and_publish_before_after(lambda: self.apply_operator(payload))
+  File "/sise/home/itaitz/EC-KitY/eckity/evaluators/population_evaluator.py", line 28, in apply_operator
+    return self._evaluate(payload)
+  File "/sise/home/itaitz/EC-KitY/approx_ml_pop_eval.py", line 177, in _evaluate
+    self.fit(sub_population.individuals, fitnesses)
+  File "/sise/home/itaitz/EC-KitY/approx_ml_pop_eval.py", line 374, in fit
+    self.model.fit(X[train_index], y[train_index], sample_weight)
+  File "/home/itaitz/.conda/envs/ec_env/lib/python3.9/site-packages/sklearn/linear_model/_ridge.py", line 1134, in fit
+    return super().fit(X, y, sample_weight=sample_weight)
+  File "/home/itaitz/.conda/envs/ec_env/lib/python3.9/site-packages/sklearn/linear_model/_ridge.py", line 866, in fit
+    X, y, X_offset, y_offset, X_scale = _preprocess_data(
+  File "/home/itaitz/.conda/envs/ec_env/lib/python3.9/site-packages/sklearn/linear_model/_base.py", line 252, in _preprocess_data
+    X_offset = np.average(X, axis=0, weights=sample_weight)
+  File "<__array_function__ internals>", line 200, in average
+  File "/home/itaitz/.conda/envs/ec_env/lib/python3.9/site-packages/numpy/lib/function_base.py", line 548, in average
+    raise ZeroDivisionError(
+ZeroDivisionError: Weights sum to zero, can't be normalized

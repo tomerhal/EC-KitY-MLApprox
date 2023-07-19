@@ -1,8 +1,0 @@
- dsname: mushroom
- n_samples: 8124
- n_features: 22
- n_replicates: 60
- model: Ridge
- model params: {'alpha': 2}
- approx threshold: 0.06
-

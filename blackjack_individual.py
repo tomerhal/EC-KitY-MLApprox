@@ -1,19 +1,20 @@
 import numpy as np
 
-from eckity.genetic_encodings.ga.float_vector import FloatVector
+from eckity.genetic_encodings.ga.bit_string_vector import BitStringVector
 from eckity.fitness.simple_fitness import SimpleFitness
 
 from typing import Tuple
 
-class BlackjackIndividual(FloatVector):
+class BlackjackIndividual(BitStringVector):
     def __init__(
         self,
         fitness: SimpleFitness,
         length: int,
-        bounds: Tuple[int, int]
+        bounds: Tuple[int, int],
+        rewards: np.ndarray = None
     ):
         super().__init__(fitness, length, bounds)
-        self.rewards = None
+        self.rewards = rewards
 
     def reset_rewards(self) -> None:
         self.rewards = np.ones(self.length)

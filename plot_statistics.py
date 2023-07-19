@@ -27,7 +27,6 @@ class PlotStatistics(Statistics):
         self.mean_fitnesses = []
         self.median_fitnesses = []
         self.max_fitnesses = []
-        self.min_fitnesses = []
 
     def write_statistics(self, sender, data_dict):
         sub_pop = data_dict['population'].sub_populations[0]
@@ -36,23 +35,24 @@ class PlotStatistics(Statistics):
         self.mean_fitnesses.append(np.mean(fitnesses))
         self.median_fitnesses.append(np.median(fitnesses))
         self.max_fitnesses.append(np.max(fitnesses))
-        self.min_fitnesses.append(np.min(fitnesses))
 
-    def plot_statistics(self, dsname, model_type, model_params):
+    def plot_statistics(self, *args):
         assert len(self.mean_fitnesses) == len(self.median_fitnesses) ==\
-            len(self.max_fitnesses) == len(self.min_fitnesses), \
-                'Statistics lists are not the same length'
+            len(self.max_fitnesses), 'Statistics lists are not the same length'
         
-        plt.title(f'{dsname} {model_type} {model_params}')
-        plt.plot(self.mean_fitnesses, label='mean')
-        plt.plot(self.median_fitnesses, label='median')
-        plt.plot(self.max_fitnesses, label='max')
-        plt.plot(self.min_fitnesses, label='min')
-        plt.xlabel('generation')
-        plt.ylabel('fitness')
-        plt.xticks(range(0, len(self.mean_fitnesses) + 1, 5))
-        plt.legend()
-        plt.show()
+        print('mean_fitnesses =', self.mean_fitnesses)
+        print('median_fitnesses =', self.median_fitnesses)
+        print('max_fitnesses =', self.max_fitnesses)
+        
+        # plt.title(str(*args))
+        # plt.plot(self.mean_fitnesses, label='mean')
+        # plt.plot(self.median_fitnesses, label='median')
+        # plt.plot(self.max_fitnesses, label='max')
+        # plt.xlabel('generation')
+        # plt.ylabel('fitness')
+        # plt.xticks(range(0, len(self.mean_fitnesses) + 1, 5))
+        # plt.legend()
+        # plt.show()
 
     # Necessary for valid pickling, since modules cannot be pickled
     def __getstate__(self):

@@ -1,27 +1,25 @@
 import numpy as np
-from time import process_time
 import sys
-
-from sklearn.metrics import balanced_accuracy_score
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-
-from eckity.sklearn_compatible.sk_classifier import SKClassifier
 
 from eckity.algorithms.simple_evolution import SimpleEvolution
 from eckity.breeders.simple_breeder import SimpleBreeder
 from eckity.subpopulation import Subpopulation
-from eckity.creators.ga_creators.float_vector_creator import GAFloatVectorCreator
+from eckity.genetic_operators.selections.tournament_selection \
+    import TournamentSelection
+from eckity.genetic_operators.crossovers.vector_k_point_crossover \
+    import VectorKPointsCrossover
+from eckity.genetic_operators.mutations.vector_random_mutation \
+    import BitStringVectorNFlipMutation, IntVectorNPointMutation
 
-from eckity.genetic_operators.selections.tournament_selection import TournamentSelection
-from eckity.genetic_operators.crossovers.vector_k_point_crossover import VectorKPointsCrossover
-from eckity.genetic_operators.mutations.vector_random_mutation import FloatVectorUniformNPointMutation
-from eckity.genetic_operators.mutations.vector_random_mutation import FloatVectorGaussNPointMutation
 
-from lin_comb_clf_eval import LinCombClassificationfEvaluator
 from plot_statistics import PlotStatistics
+import utils
 
-from pmlb import fetch_data
+from blackjack_creator import BlackjackVectorCreator
+from blackjack_evaluator import BlackjackEvaluator
+
+from frozen_lake_evaluator import FrozenLakeEvaluator
+from frozen_lake_creator import FrozenLakeVectorCreator
 
 
 def main():
@@ -29,65 +27,56 @@ def main():
     Basic setup.
     """
 
-    evo_start_time = process_time()
-
-    # parse system arguments
-    if len(sys.argv) < 2:
-        print("Usage: python evo_experiment.py <dataset_name>")
+    if len(sys.argv) < 3:
+        print('Usage: python3 evo_experiment.py <job_id> <problem>')
         exit(1)
 
-    dsname = sys.argv[1]
+    problem = sys.argv[2]
 
-    # load the magic dataset
-    X, y = fetch_data(dsname, return_X_y=True, local_cache_dir='../../../EC-KitY-MLApprox-Old/datasets')
-    # split the dataset to train and test set
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+    if problem == 'blackjack':
+        length = np.prod(utils.BLACKJACK_STATE_ACTION_SPACE_SHAPE)
+        creator = BlackjackVectorCreator(length=length, bounds=(0, 1))
+        ind_eval = BlackjackEvaluator(n_episodes=100_000)
+        mutation = BitStringVectorNFlipMutation(probability=0.3, n=length//10)
 
-    sc = StandardScaler()
-    X_train = sc.fit_transform(X_train) # scaled data has mean 0 and variance 1 (only over training set)
-    X_test = sc.transform(X_test) # use same scaler as one fitted to training data
+    elif problem == 'frozenlake':
+        length = utils.FROZEN_LAKE_STATES
+        creator = FrozenLakeVectorCreator(length=length, bounds=(0, 3))
+        ind_eval = FrozenLakeEvaluator(total_episodes=2000)
+        mutation = IntVectorNPointMutation(probability=0.3, n=length//10)
+    else:
+        raise ValueError('Invalid problem ' + problem)
 
-    # Initialize both algorithms
     evo = SimpleEvolution(
-        Subpopulation(creators=GAFloatVectorCreator(length=X.shape[1], bounds=(-1, 1)),
+        Subpopulation(creators=creator,
                       population_size=100,
-                      # user-defined fitness evaluation method
-                      evaluator=LinCombClassificationfEvaluator(),
-                      # maximization problem (fitness is sum of values), so higher fitness is better
+                      evaluator=ind_eval,
                       higher_is_better=True,
                       elitism_rate=0.0,
-                      # genetic operators sequence to be applied in each generation
                       operators_sequence=[
-                        VectorKPointsCrossover(probability=0.7, k=2),
-                        FloatVectorGaussNPointMutation(probability=0.3, n=5),
-                        FloatVectorUniformNPointMutation(probability=0.1, n=5)
+                          VectorKPointsCrossover(probability=0.7, k=2),
+                          mutation,
                       ],
                       selection_methods=[
                           # (selection method, selection probability) tuple
-                          (TournamentSelection(tournament_size=4, higher_is_better=True), 1)
+                          (TournamentSelection(tournament_size=4,
+                                               higher_is_better=True), 1)
                       ]),
         breeder=SimpleBreeder(),
-        max_workers=1,
-        max_generation=100,
+        max_generation=200,
+        executor='process',
+        max_workers=10,
         statistics=PlotStatistics()
     )
+    evo.evolve()
 
-    # wrap the basic evolutionary algorithm with a sklearn-compatible classifier
-    evo_classifier = SKClassifier(evo)
+    statistics = evo.statistics[0]
+    statistics.plot_statistics()
 
-    # train the classifier
-    evo_classifier.fit(X_train, y_train)
+    best_ind = evo.best_of_run_
+    print('Best individual\n:', best_ind.vector)
+    print('Best fitness:', best_ind.get_pure_fitness())
 
-    # calculate the accuracy of the classifier
-    y_pred = evo_classifier.predict(X_test)
-    accuracy = balanced_accuracy_score(y_test, y_pred)
-    print("Balanced Accuracy: ", accuracy)
-
-    evo_time = process_time() - evo_start_time
-    print('Total time:', evo_time)
-
-    plot_stats = evo.statistics[0]
-    plot_stats.plot_statistics(dsname, "evo", "")
 
 if __name__ == "__main__":
     main()
